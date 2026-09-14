@@ -10,6 +10,8 @@ import {
   mifflinBmr,
   calorieNeed,
   weatherKcalFactor,
+  hangGeometry,
+  paceDistance,
 } from "./math.ts";
 
 test("sound speed at 20C", () => {
@@ -82,4 +84,16 @@ test("calorie hike adds walk and climb", () => {
 test("cold weather adds a BMR tax", () => {
   assert.ok(weatherKcalFactor(20, 50) > 0.1);
   assert.equal(weatherKcalFactor(70, 50), 0);
+});
+
+test("pace 62 per 100m and 310 walked is 500m", () => {
+  assert.ok(Math.abs(paceDistance(310, 62) - 500) < 0.01);
+});
+
+test("hang 12 ft branch fails the 6 ft below-limb rule", () => {
+  const low = hangGeometry(20, 12, true);
+  assert.equal(low.ok, false);
+  const ok = hangGeometry(20, 20, true);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.rope, 20 + 40 + 10);
 });

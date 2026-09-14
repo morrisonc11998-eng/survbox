@@ -12,10 +12,12 @@ import {
   fFromC,
   formatHours,
   frostbiteNote,
+  hangGeometry,
   heatEnergyKJ,
   lPer100,
   mpgFromFill,
   naismithHours,
+  paceDistance,
   slopeStats,
   windChillF,
   type WorkLevel,
@@ -28,7 +30,10 @@ export function ToolSlope() {
   const [out, setOut] = useState<ReturnType<typeof slopeStats> | null>(null);
   return (
     <div className="grid gap-4">
-      <How>Map rise and run in the same units. Grade is the hill. Extra is how much farther than the map line.</How>
+      <How>
+        Rise and run in the same units. Grade is the hill. Extra is how much
+        farther you walk than the map line.
+      </How>
       <Eq>grade% = 100·rise/run · angle = atan(rise/run) · slope = √(r²+run²)</Eq>
       <Panel className="grid gap-3">
         <Field label={`Rise (${system === "us" ? "ft" : "m"})`}>
@@ -40,6 +45,7 @@ export function ToolSlope() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!rise.ok || !run.ok || run.n <= 0}
         onClick={() => {
           if (!rise.ok || !run.ok || run.n <= 0) return;
           setOut(slopeStats(rise.n, run.n));
@@ -93,11 +99,16 @@ export function ToolHike() {
         <Field label={imperial ? "Climb ft" : "Climb m"}>
           <NumInput value={climb.v} onChange={(e) => climb.setV(e.target.value)} />
         </Field>
-        <Field label="Pack lb (0 ok)">
+        <Field label={imperial ? "Pack lb (0 ok)" : "Pack kg (0 ok)"}>
           <NumInput value={pack.v} onChange={(e) => pack.setV(e.target.value)} />
         </Field>
-        <Field label="Terrain (1 trail, 1.2 rough, 1.5 brush)">
-          <NumInput value={terr.v} onChange={(e) => terr.setV(e.target.value)} />
+        <Field label="Terrain">
+          <Select value={terr.v} onChange={(e) => terr.setV(e.target.value)}>
+            <option value="1">Trail 1.0</option>
+            <option value="1.2">Rough 1.2</option>
+            <option value="1.5">Brush 1.5</option>
+            <option value="2">Off-trail 2.0</option>
+          </Select>
         </Field>
         <Field label="Daylight left (min, 0 skip)">
           <NumInput value={lite.v} onChange={(e) => lite.setV(e.target.value)} />
@@ -105,13 +116,14 @@ export function ToolHike() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!dist.ok || !climb.ok}
         onClick={() => {
           if (!dist.ok || !climb.ok) return;
           const hours = naismithHours({
             imperial,
             dist: dist.n,
             climb: climb.n,
-            packLb: pack.ok ? pack.n : 0,
+            packLb: pack.ok ? (imperial ? pack.n : pack.n * 2.20462) : 0,
             terrain: terr.ok ? terr.n : 1,
           });
           const need = hours * 60;
@@ -213,6 +225,7 @@ export function ToolCals() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!age.ok || !height.ok || !weight.ok || !t.ok || height.n <= 0 || weight.n <= 0}
         onClick={() => {
           if (!age.ok || !height.ok || !weight.ok || !t.ok || height.n <= 0 || weight.n <= 0) return;
           const cm = imperial ? height.n * 2.54 : height.n;
@@ -262,16 +275,18 @@ export function ToolCals() {
 
 export function ToolPace() {
   const unit = useNum("1");
-  const ppu = useNum("");
+  const cal = useNum("");
   const n = useNum("");
   const [dist, setDist] = useState<number | null>(null);
+  const unitName = unit.n === 1 ? "meters" : unit.n === 2 ? "yards" : "feet";
   return (
     <div className="grid gap-4">
       <How>
-        Calibrate 100 m or 100 yd on this ground. Recal on slope, sand, snow,
-        night, fatigue.
+        Walk a measured 100 of your unit on this ground. Count every time the
+        same foot hits — that is one pace. Recal on slope, sand, snow, night,
+        fatigue.
       </How>
-      <Eq>dist = paces / paces_per_unit</Eq>
+      <Eq>dist = (paces walked / paces per 100) × 100</Eq>
       <Panel className="grid gap-3">
         <Field label="Unit you calibrated">
           <Select value={unit.v} onChange={(e) => unit.setV(e.target.value)}>
@@ -280,8 +295,8 @@ export function ToolPace() {
             <option value="3">Feet</option>
           </Select>
         </Field>
-        <Field label="Paces per unit">
-          <NumInput value={ppu.v} onChange={(e) => ppu.setV(e.target.value)} />
+        <Field label={`Paces for 100 ${unitName}`}>
+          <NumInput value={cal.v} onChange={(e) => cal.setV(e.target.value)} />
         </Field>
         <Field label="Paces walked">
           <NumInput value={n.v} onChange={(e) => n.setV(e.target.value)} />
@@ -289,9 +304,10 @@ export function ToolPace() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!cal.ok || cal.n <= 0 || !n.ok}
         onClick={() => {
-          if (!ppu.ok || ppu.n <= 0 || !n.ok) return;
-          setDist(n.n / ppu.n);
+          if (!cal.ok || cal.n <= 0 || !n.ok) return;
+          setDist(paceDistance(n.n, cal.n));
         }}
       >
         Distance
@@ -329,7 +345,10 @@ export function ToolHeight() {
   const [out, setOut] = useState<null | { k: string; v: string }>(null);
   return (
     <div className="grid gap-4">
-      <How>Clinometer angle and a paced base. Level ground assumed.</How>
+      <How>
+        Clinometer angle and a paced base on level ground. Angle is from your
+        eye to the top of the object.
+      </How>
       <Eq>h = d·tan(a) + eye · range = (h − eye) / tan(a)</Eq>
       <Panel className="grid gap-3">
         <Field label="Mode">
@@ -338,7 +357,7 @@ export function ToolHeight() {
             <option value="2">Range to object</option>
           </Select>
         </Field>
-        <Field label="Eye height (same units)">
+        <Field label="Eye height (same units as distance)">
           <NumInput value={eye.v} onChange={(e) => eye.setV(e.target.value)} />
         </Field>
         <Field label="Angle deg">
@@ -356,6 +375,7 @@ export function ToolHeight() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!ang.ok || ang.n <= 0 || ang.n >= 90 || !eye.ok || (mode.n === 1 ? !d.ok : !h.ok)}
         onClick={() => {
           if (!ang.ok || ang.n <= 0 || ang.n >= 90 || !eye.ok) return;
           const ta = Math.tan((ang.n * Math.PI) / 180);
@@ -386,7 +406,10 @@ export function ToolBoil() {
   const imperial = system === "us";
   return (
     <div className="grid gap-4">
-      <How>Elevation drops the boil. Snow costs latent heat. Wind can double the time.</How>
+      <How>
+        Elevation drops the boil. Snow costs latent heat. Wind can double the
+        time. Bugs die at a rolling boil. Chemical water stays chemical.
+      </How>
       <Eq>Tboil °C = 100 − elev_m/300 · Q = m·4.184·ΔT (+334 kJ/kg ice) · t = Q/(kW·60)</Eq>
       <Panel className="grid gap-3">
         <Field label={imperial ? "Elevation ft" : "Elevation m"}>
@@ -415,6 +438,7 @@ export function ToolBoil() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!elev.ok || !ts.ok || !vol.ok}
         onClick={() => {
           if (!elev.ok || !ts.ok || !vol.ok) return;
           const em = imperial ? elev.n * 0.3048 : elev.n;
@@ -424,7 +448,7 @@ export function ToolBoil() {
           const dT = Math.max(0, bc - tsc);
           const q = heatEnergyKJ(vol.n, dT, snow.n === 1);
           const minutes = q / (kw * 60);
-          let extra = "Rolling boil, then wait.";
+          let extra = "Once it rolls: 1 min. Above 2000 m / 6500 ft: 3 min.";
           if (stove.n === 3 || stove.n === 4) {
             let g = 12 * vol.n * (dT / 90);
             if (snow.n === 1) g += 10 * vol.n;
@@ -486,6 +510,7 @@ export function ToolNeed() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!hrs.ok || !t.ok}
         onClick={() => {
           if (!hrs.ok || !t.ok) return;
           const tF = imperial ? t.n : fFromC(t.n);
@@ -523,7 +548,10 @@ export function ToolRiver() {
   const imperial = system === "us";
   return (
     <div className="grid gap-4">
-      <How>Knee-plus and pushing current is a no. Fast and wide is a no. When in doubt, walk.</How>
+      <How>
+        Knee-deep and pushing current is a no. Fast water is a no. When in
+        doubt, walk the bank.
+      </How>
       <Panel className="grid gap-3">
         <Field label={imperial ? "Width ft" : "Width m"}>
           <NumInput value={w.v} onChange={(e) => w.setV(e.target.value)} />
@@ -541,6 +569,7 @@ export function ToolRiver() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!w.ok || !d.ok}
         onClick={() => {
           if (!w.ok || !d.ok) return;
           const wf = imperial ? w.n : w.n * 3.28084;
@@ -590,7 +619,7 @@ export function ToolRope() {
   const [out, setOut] = useState<null | Record<string, string>>(null);
   return (
     <div className="grid gap-4">
-      <How>Compare options on a pack haul. Do not hang a person on this math.</How>
+      <How>Pack haul only. Do not hang a person on this math.</How>
       <Eq>est MA = strands × 0.9^pulleys · WLL = MBS/SF × knot × wet × age</Eq>
       <Panel className="grid gap-3">
         <Field label="Support strands">
@@ -629,6 +658,7 @@ export function ToolRope() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!strands.ok || !load.ok || !mbs.ok}
         onClick={() => {
           if (!strands.ok || !load.ok || !mbs.ok) return;
           const kf = { 1: 1, 2: 0.8, 3: 0.7, 4: 0.5 }[knot.n] ?? 0.7;
@@ -647,10 +677,10 @@ export function ToolRope() {
             w10: String(Math.round(w10)),
             note:
               load.n > w10
-                ? "OVER life factor. Pick another plan."
+                ? "OVER the life factor (MBS/10). Pick another plan."
                 : load.n > w5
-                  ? "OVER utility factor."
-                  : "Still not a person hang.",
+                  ? "OVER the utility factor (MBS/5). Fine for a pack, not for a person."
+                  : "Under the utility factor. Still not a person hang.",
           });
         }}
       >
@@ -681,7 +711,10 @@ export function ToolHang() {
   const imperial = system === "us";
   return (
     <div className="grid gap-4">
-      <How>Classic 12-foot bag rule. Bag 6 ft off the trunk.</How>
+      <How>
+        Bag 12 ft off the dirt, 6 ft from either trunk, 6 ft below the branch.
+        That is the 12-foot rule. The branch has to be higher than 12 ft.
+      </How>
       <Eq>rope ≈ span + 2·height + tail</Eq>
       <Panel className="grid gap-3">
         <Field label={imperial ? "Tree spacing ft" : "Tree spacing m"}>
@@ -693,12 +726,10 @@ export function ToolHang() {
       </Panel>
       <Button
         className="w-full"
+        disabled={!span.ok || !branch.ok}
         onClick={() => {
           if (!span.ok || !branch.ok) return;
-          const rope = span.n + 2 * branch.n + (imperial ? 10 : 3);
-          const brf = imperial ? branch.n : branch.n * 3.28084;
-          const spf = imperial ? span.n : span.n * 3.28084;
-          setOut({ rope, ok: brf >= 12 && spf >= 12 });
+          setOut(hangGeometry(span.n, branch.n, imperial));
         }}
       >
         Check
@@ -706,7 +737,11 @@ export function ToolHang() {
       {out ? (
         <Result
           items={[{ k: "Rope need", v: `~${Math.round(out.rope)}` }]}
-          note={out.ok ? "Geometry possible." : "12-ft rule is ugly here."}
+          note={
+            out.ok
+              ? "12 / 6 / 6 is possible with this span and branch."
+              : "Need a higher limb or a wider gap. Bag 12 ft up, 6 ft from the trunk, 6 ft below the limb."
+          }
           tone={out.ok ? "ok" : "warn"}
         />
       ) : null}
@@ -721,7 +756,7 @@ export function ToolBattery() {
   const [out, setOut] = useState<string[] | null>(null);
   return (
     <div className="grid gap-4">
-      <How>Flooded lead-acid. Sit before rest voltage. Clean the cables first.</How>
+      <How>Flooded lead-acid. Sit 30 minutes before rest voltage. Clean the cables first.</How>
       <Eq>12.66 full · 12.4 ~75% · 12.2 ~50% · 12.0 ~25% · crank under 10.5 weak · run 13.7–14.7 charging</Eq>
       <Panel className="grid gap-3">
         <Field label="Rest volts">
@@ -745,10 +780,10 @@ export function ToolBattery() {
           else if (vr.n >= 12.0) lines.push("Rest: ~25%");
           else lines.push("Rest: dead/low");
           if (vc.ok && vc.n > 0) {
-            lines.push(vc.n < 9.6 ? "Crank: very weak" : vc.n < 10.5 ? "Crank: weak" : "Crank: ok-ish");
+            lines.push(vc.n < 9.6 ? "Crank: very weak" : vc.n < 10.5 ? "Crank: weak" : "Crank: holds");
           }
           if (vu.ok && vu.n > 0) {
-            lines.push(vu.n < 13.2 ? "Run: not charging" : vu.n <= 14.8 ? "Run: charging" : "Run: too high");
+            lines.push(vu.n < 13.2 ? "Run: not charging" : vu.n <= 14.8 ? "Run: charging" : "Run: too high — regulator");
           }
           setOut(lines);
         }}
@@ -771,7 +806,10 @@ export function ToolFuel() {
   const [out, setOut] = useState<{ items: { k: string; v: string }[]; note?: string; tone?: "ok" | "warn" | "danger" } | null>(null);
   return (
     <div className="grid gap-4">
-      <How>Use what this tank actually burned. Hills, idle, and cold starts lie. Keep 20% in your head.</How>
+      <How>
+        Use what this tank actually burned. Hills, idle, and cold starts lie.
+        Keep 20% in your head. Numbers are US gallons and miles.
+      </How>
       <Eq>MPG = mi/gal · L/100km = 235.215/MPG · range = gal_left × MPG · GPH = gal/hours</Eq>
       <Field label="Mode">
         <Select value={mode.v} onChange={(e) => mode.setV(e.target.value)}>
@@ -891,7 +929,7 @@ export function ToolAvpu() {
     <div className="grid gap-4">
       <How>
         Best response now. P or U: the airway is the job. Approximate GCS: A
-        14–15, V 10–13, P 7–9, U 3–6.
+        14–15, V 10–13, P 7–9, U 3–6. Write the letter, not just “awake.”
       </How>
       <Field label="Best now">
         <Select value={c.v} onChange={(e) => c.setV(e.target.value)}>
@@ -917,10 +955,10 @@ export function ToolGcs() {
   const g = Math.min(4, Math.max(1, e.n || 1)) + Math.min(5, Math.max(1, v.n || 1)) + Math.min(6, Math.max(1, m.n || 1));
   return (
     <div className="grid gap-4">
-      <How>Best eye, verbal, motor. Record E+V+M. ≤8 is airway worry. Serial scores beat one number.</How>
+      <How>Best eye, verbal, motor. Record E+V+M, not just the total. ≤8 is airway worry. Serial scores beat one number.</How>
       <Eq>GCS = E + V + M (3–15) · 13–15 mild · 9–12 moderate · 3–8 severe</Eq>
       <Panel className="grid gap-3">
-        <Field label="Eye 4 spon / 3 voice / 2 pain / 1 none">
+        <Field label="Eye">
           <Select value={e.v} onChange={(ev) => e.setV(ev.target.value)}>
             <option value="4">4 Spontaneous</option>
             <option value="3">3 To voice</option>
@@ -928,7 +966,7 @@ export function ToolGcs() {
             <option value="1">1 None</option>
           </Select>
         </Field>
-        <Field label="Verbal 5 orient / 4 conf / 3 words / 2 sounds / 1 none">
+        <Field label="Verbal">
           <Select value={v.v} onChange={(ev) => v.setV(ev.target.value)}>
             <option value="5">5 Oriented</option>
             <option value="4">4 Confused</option>
@@ -937,7 +975,7 @@ export function ToolGcs() {
             <option value="1">1 None</option>
           </Select>
         </Field>
-        <Field label="Motor 6 obeys / 5 local / 4 withdraw / 3 flex / 2 extend / 1 none">
+        <Field label="Motor">
           <Select value={m.v} onChange={(ev) => m.setV(ev.target.value)}>
             <option value="6">6 Obeys</option>
             <option value="5">5 Localizes</option>
@@ -1056,9 +1094,12 @@ export function ToolShock() {
     <Card
       title="You do not measure percent in the dirt. You treat the bleed and the cold."
       lines={[
-        "Look: fast pulse, pale/cool, anxious then quiet, thirst, weak radial.",
-        "Class I under 15% blood. Class II 15–30% heart rate up. Class III 30–40% BP down. Class IV over 40% dying.",
-        "Lay flat if breathing is fine. Keep warm.",
+        "Look: fast weak pulse, pale or cool skin, anxious then quiet, thirst, radial fading.",
+        "Class I: under 15% lost — pulse may still look normal.",
+        "Class II: 15–30% — heart rate up.",
+        "Class III: 30–40% — blood pressure down.",
+        "Class IV: over 40% — they are dying. Bleed control is the treatment.",
+        "Flat if they can breathe. Keep warm.",
       ]}
     />
   );
@@ -1069,9 +1110,9 @@ export function ToolBurns() {
     <Card
       title="Adult rule of nines. Do not use adult nines on a child. Fluids are a medic job."
       lines={[
-        "Head 9. Each arm 9. Chest 18. Back 18. Each leg 18. Groin 1. Palm+fingers ~1%.",
-        "Cool running water if you have it, then cover.",
-        "Face, soot, singed hair: watch the airway.",
+        "Head 9. Each arm 9. Chest 18. Back 18. Each leg 18. Groin 1. Palm plus fingers ~1%.",
+        "Cool running water if you have it, then cover. Do not pack ice on it.",
+        "Face, soot, singed hair: watch the airway. It swells later.",
       ]}
     />
   );
@@ -1080,7 +1121,7 @@ export function ToolBurns() {
 export function ToolMist() {
   return (
     <Card
-      title="Say it twice. Write it on tape on the chest."
+      title="Say it twice so they hear it. Write it on tape on the chest."
       lines={[
         "M — Mechanism.",
         "I — Injuries you found.",
@@ -1121,7 +1162,7 @@ export function ToolExposure() {
         <Field label={imperial ? "Air °F" : "Air °C"}>
           <NumInput value={t.v} onChange={(e) => t.setV(e.target.value)} />
         </Field>
-        <Field label="Wind mph">
+        <Field label={imperial ? "Wind mph" : "Wind km/h"}>
           <NumInput value={v.v} onChange={(e) => v.setV(e.target.value)} />
         </Field>
         <Field label="RH %">
@@ -1148,7 +1189,8 @@ export function ToolExposure() {
         onClick={() => {
           if (!t.ok || !v.ok) return;
           const tF = imperial ? t.n : fFromC(t.n);
-          const wct = windChillF(tF, v.n);
+          const mph = imperial ? v.n : v.n * 0.621371;
+          const wct = windChillF(tF, mph);
           let score = 0;
           if (tF <= 50) score += 2;
           if (tF <= 32) score += 2;
@@ -1221,8 +1263,8 @@ export function ToolSignal() {
       lines={[
         "Three of anything is help: whistle, smoke, light.",
         "Shots in threes only if that is the plan and you can spare the ammo.",
-        "Open ground. Move the signal. Mirror across the aircraft path.",
-        "A moving target is hard to recover.",
+        "Open ground. Put the signal where a plane can see it. Mirror across the aircraft's path.",
+        "Stay by it. A moving person is hard to find.",
       ]}
     />
   );

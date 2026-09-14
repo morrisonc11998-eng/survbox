@@ -155,6 +155,22 @@ export function lPer100(mpg: number) {
   return 235.215 / mpg;
 }
 
+/** Calibrate over 100 of the unit. One pace = same foot hits again. */
+export function paceDistance(pacesWalked: number, pacesPerHundred: number) {
+  return (pacesWalked / pacesPerHundred) * 100;
+}
+
+/** 12-ft bag rule: bag 12 ft up, 6 ft from trunk, 6 ft below the limb. */
+export function hangGeometry(span: number, branch: number, imperial: boolean) {
+  const spanFt = imperial ? span : span * 3.28084;
+  const branchFt = imperial ? branch : branch * 3.28084;
+  const tail = imperial ? 10 : 3;
+  return {
+    rope: span + 2 * branch + tail,
+    ok: branchFt >= 18 && spanFt >= 12,
+  };
+}
+
 export type WorkLevel = "light" | "medium" | "heavy";
 
 const WALK_KCAL_PER_KG_KM: Record<WorkLevel, number> = {
@@ -215,4 +231,3 @@ export function calorieNeed(opts: {
     total: Math.round(camp + walk + weather),
   };
 }
-

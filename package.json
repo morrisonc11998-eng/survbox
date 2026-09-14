@@ -94,6 +94,6 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0"
   },
-  "version": "1.1.1",
-  "description": "SURVBOX 1.1.1 \u2014 pocket field kit. Weather, nav, water, bushcraft, TCCC."
+  "version": "1.1.2",
+  "description": "SURVBOX 1.1.2 \u2014 pocket field kit. Weather, nav, water, bushcraft, TCCC."
 }

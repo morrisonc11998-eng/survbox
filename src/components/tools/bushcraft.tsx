@@ -39,6 +39,57 @@ function Plate({
   );
 }
 
+function SplintDiagram() {
+  return (
+    <svg
+      viewBox="0 0 360 158"
+      className="w-full"
+      role="img"
+      aria-label="Splint spans the joint above and the joint below the break."
+    >
+      <text x="180" y="16" textAnchor="middle" className="fill-subtle" fontSize="9" fontFamily="IBM Plex Sans, sans-serif" letterSpacing="2.4">
+        PAST BOTH JOINTS
+      </text>
+      {/* stick — longer than the arm */}
+      <rect x="28" y="38" width="304" height="10" rx="5" className="fill-accent" />
+      <text x="42" y="34" className="fill-muted" fontSize="8" fontFamily="IBM Plex Sans, sans-serif">
+        PAST
+      </text>
+      <text x="292" y="34" className="fill-muted" fontSize="8" fontFamily="IBM Plex Sans, sans-serif">
+        PAST
+      </text>
+      {/* padding */}
+      <rect x="78" y="50" width="188" height="8" rx="2" className="fill-warn/70" />
+      {/* forearm */}
+      <rect x="78" y="60" width="188" height="28" rx="14" className="fill-muted/45" />
+      {/* elbow joint */}
+      <circle cx="84" cy="74" r="16" className="fill-fg/80" />
+      <circle cx="84" cy="74" r="7" className="fill-bg" />
+      {/* wrist joint */}
+      <circle cx="260" cy="74" r="14" className="fill-fg/80" />
+      <circle cx="260" cy="74" r="6" className="fill-bg" />
+      {/* hand */}
+      <rect x="268" y="64" width="36" height="20" rx="8" className="fill-muted/50" />
+      {/* wraps */}
+      <rect x="118" y="34" width="14" height="62" rx="2" className="fill-warn" />
+      <rect x="168" y="34" width="14" height="62" rx="2" className="fill-warn" />
+      <rect x="218" y="34" width="14" height="62" rx="2" className="fill-warn" />
+      <text x="84" y="118" textAnchor="middle" className="fill-muted" fontSize="9" fontFamily="IBM Plex Sans, sans-serif" letterSpacing="1.6">
+        ELBOW
+      </text>
+      <text x="174" y="118" textAnchor="middle" className="fill-subtle" fontSize="9" fontFamily="IBM Plex Sans, sans-serif" letterSpacing="1.6">
+        BREAK
+      </text>
+      <text x="260" y="118" textAnchor="middle" className="fill-muted" fontSize="9" fontFamily="IBM Plex Sans, sans-serif" letterSpacing="1.6">
+        WRIST
+      </text>
+      <text x="180" y="144" textAnchor="middle" className="fill-subtle" fontSize="10" fontFamily="IBM Plex Sans, sans-serif">
+        Pad. Stick. Wrap. Leave the fingers out.
+      </text>
+    </svg>
+  );
+}
+
 export function ToolCraftShelters() {
   return (
     <div className="grid gap-4">
@@ -267,30 +318,44 @@ export function ToolCraftSignals() {
   return (
     <div className="grid gap-4">
       <How>
-        Three of anything is help. Put the signal where a bird or a truck can
-        see it. Stay by it. A moving target is hard to recover.
+        Three of anything is help. Put the signal where a plane or a truck can
+        see it. Stay by it. A moving person is hard to find.
       </How>
-      <Plate src="/bushcraft/three-fire.jpg" title="Three fires">
-        <p>
-          Triangle or a straight line, well spaced, on open ground or a ridge.
-          Day or night. One fire is a camp. Three is a call. Keep fuel staged
-          so they all stay lit.
-        </p>
+      <Plate
+        src="/bushcraft/three-fire.jpg"
+        title="Three fires"
+        steps={[
+          "Triangle or a straight line, well spaced, on a ridge or in a clearing.",
+          "One fire is a camp. Three is a call.",
+          "Stage fuel so all three stay lit. Light them together when you hear an aircraft.",
+        ]}
+        note="Night: bright dry wood. Day: add green for smoke."
+      >
+        <p>The oldest distress mark that still works.</p>
       </Plate>
-      <Plate src="/bushcraft/smoke.jpg" title="Smoke">
-        <p>
-          Build a hot, clean fire first. Then dump green boughs, wet leaves, or
-          a little damp duff on it. You want a fat column, not a smothered pile.
-          White against dark timber. Black smoke (oil, rubber) against snow.
-          Pulse it with a panel if you hear an aircraft.
-        </p>
+      <Plate
+        src="/bushcraft/smoke.jpg"
+        title="Smoke"
+        steps={[
+          "Build a hot, clean fire first. You need a column, not a smothered pile.",
+          "Dump green boughs, wet leaves, or damp duff on it.",
+          "White smoke against dark timber. Black smoke (oil, rubber) against snow.",
+          "If you hear an aircraft, uncover and recover the fire so the column pulses.",
+        ]}
+      >
+        <p>Day signal. Fat and high beats a wisp in the canopy.</p>
       </Plate>
-      <Plate src="/bushcraft/night.jpg" title="Night fire">
-        <p>
-          Bright, high, dry wood. Ridge or clearing. Three piles if you can.
-          Save the green for day smoke. Do not stare into it and wreck your
-          night vision. Keep a watch. One person on the fire, one on the noise.
-        </p>
+      <Plate
+        src="/bushcraft/night.jpg"
+        title="Night fire"
+        steps={[
+          "Bright, high, dry wood. Ridge or clearing. Three piles if you can.",
+          "Save the green for day smoke.",
+          "Do not stare into it — you wreck night vision.",
+          "One person on the fire. One on the noise.",
+        ]}
+      >
+        <p>Light is the night signal. Keep a watch.</p>
       </Plate>
     </div>
   );
@@ -300,25 +365,118 @@ export function ToolCraftCare() {
   return (
     <div className="grid gap-4">
       <How>
-        MARCH still owns the order. This is improvised gear when the kit is gone.
-        Wide, tight, timed. Do not play surgeon.
+        MARCH still owns the order. Bleed first. This page is improvised gear
+        when the kit is gone. Wide, tight, timed. You are not setting bones.
       </How>
-      <Plate src="/bushcraft/splint.jpg" title="Makeshift splint">
+
+      <article className="overflow-hidden rounded-xl border border-border bg-surface">
+        <img
+          src="/bushcraft/splint.jpg"
+          alt="Improvised forearm splint: padded shirt, stick along the bone, cloth wraps"
+          className="aspect-[4/3] w-full object-cover object-[50%_35%]"
+        />
+        <div className="grid gap-4 p-4">
+          <div>
+            <p className="font-display text-[11px] font-semibold tracking-[0.22em] text-muted uppercase">
+              Field procedure
+            </p>
+            <h2 className="font-display text-2xl font-semibold tracking-wide">Makeshift splint</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              Pad the bone. Rigid stay past both joints. Recheck the fingers.
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-md border border-border">
+            <p className="bg-raised px-3 py-2 font-display text-[11px] font-semibold tracking-[0.18em] text-muted uppercase">
+              CSM — before you wrap, after you wrap
+            </p>
+            <div className="grid grid-cols-3 divide-x divide-border">
+              {[
+                { k: "Pulse", v: "Distal to the break." },
+                { k: "Feeling", v: "Pinch a finger or toe." },
+                { k: "Move", v: "Wiggle. Do not lift." },
+              ].map((c) => (
+                <div key={c.k} className="grid gap-1 p-3">
+                  <p className="font-display text-sm font-semibold tracking-wide">{c.k}</p>
+                  <p className="text-xs leading-relaxed text-muted">{c.v}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border bg-bg px-2 py-3">
+            <SplintDiagram />
+          </div>
+
+          <ol className="grid gap-2">
+            {[
+              "Expose the limb. Cut clothes around a wound. Do not pull bone back through skin.",
+              "CSM now. Pulse, pinch, wiggle. Remember it.",
+              "Pad. Shirt, sock, moss in cloth. No stick or bark on bare skin.",
+              "Rigid stay past the joint above and the joint below. Stick, tent pole, folded pad, the other leg.",
+              "Wrap snug. Cravats, torn shirt, tape. Leave gaps so you can see color. This is not a tourniquet.",
+              "CSM again. White, numb, or cold — loosen.",
+              "Arm: sling and swathe so it cannot swing. Leg: they do not walk on it.",
+            ].map((step, i) => (
+              <li key={i} className="flex gap-3 text-sm leading-relaxed">
+                <span className="mt-0.5 w-6 shrink-0 font-mono text-xs tabular-nums text-subtle">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-border bg-raised p-3">
+              <p className="font-display text-sm font-semibold tracking-wide">Arm</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                Elbow to knuckles. Sling around the neck. Swathe the upper arm to
+                the chest so the whole thing is dead to swing.
+              </p>
+            </div>
+            <div className="rounded-md border border-border bg-raised p-3">
+              <p className="font-display text-sm font-semibold tracking-wide">Leg</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                Above the knee to past the ankle. Buddy-tape to the other leg if
+                that is all you have. They ride. They do not hike out on it.
+              </p>
+            </div>
+          </div>
+
+          <img
+            src="/bushcraft/splint-leg.jpg"
+            alt="Three real wilderness lower-leg splints: foam pad, clothing, stick and cloth"
+            className="aspect-[4/3] w-full rounded-md object-cover"
+          />
+
+          <div className="rounded-md border border-danger/40 p-3">
+            <p className="font-display text-sm font-semibold tracking-wide text-danger">Do not</p>
+            <ul className="mt-2 grid gap-1.5 text-sm leading-relaxed">
+              <li>Do not “set” a fracture unless there is no pulse and you know that job.</li>
+              <li>Do not wrap over an open hole — cover it first, then splint around it.</li>
+              <li>Do not hide the fingers or toes. You need to see them.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <Plate
+        src="/bushcraft/tq.jpg"
+        title="Improvised tourniquet"
+        steps={[
+          "Massive limb bleed that packing will not stop. That is the only reason.",
+          "Band at least two fingers wide. Cravat, belt, cut shirt. Not paracord. Not wire. Not a shoelace.",
+          "High on the limb. Not over the joint. Not on the wound.",
+          "Stick through the band. Twist until the bright bleeding stops and the pulse below is gone.",
+          "Tie the stick off so it cannot unwind. Write the time on the skin.",
+          "Do not loosen it to “check.” A CAT is better. This is the backup.",
+        ]}
+        note="Wide. Tight. Timed. If you can pack it and hold pressure, do that first."
+      >
         <p>
-          Check pulse, movement, feeling before and after. Pad the bone. Rigid
-          stay — stick, tent pole, folded pad — past the joint above and the
-          joint below. Wrap snug, not tourniquet-tight. Recheck the fingers or
-          toes. If it goes white, numb, or cold, you wrapped too hard. Loosen.
-        </p>
-      </Plate>
-      <Plate src="/bushcraft/tq.jpg" title="Improvised tourniquet">
-        <p>
-          Massive limb bleed that packing will not stop. Band at least two
-          fingers wide — a cravat, a belt, a cut shirt. Not paracord, not wire.
-          High on the limb, not over the joint. Windlass stick in the band.
-          Twist until the bright bleeding stops and the distal pulse is gone.
-          Tie the windlass off. Write the time on the skin. Do not loosen it to
-          “check.” A real CAT is better. This is the backup.
+          A wide band and a windlass. The stick in the photo is the windlass —
+          you twist it. Not a splint.
         </p>
       </Plate>
     </div>
@@ -330,38 +488,44 @@ export function ToolCraftNatural() {
     <div className="grid gap-4">
       <How>
         The woods will feed a fire and dress a wound if you know what you are
-        looking at. Name it before you use it. If you do not know the plant,
-        leave it.
+        looking at. Name it first. If you do not know the plant, leave it.
       </How>
-      <Plate src="/bushcraft/tinder.jpg" title="Tinder">
-        <p>
-          Look up, not in the mud. Dead hanging twigs, inner bark of cedar or
-          tulip poplar, birch bark even when wet, fatwood from old pine stumps,
-          cattail fluff, cramp-ball fungus, a feather stick off dry heartwood.
-          Make a nest. Kindling the size of matchsticks, then pencils, then
-          thumbs. If the tinder will not take a spark, the fire will not take
-          the night.
-        </p>
+      <Plate
+        src="/bushcraft/tinder.jpg"
+        title="Tinder"
+        steps={[
+          "Look up, not in the mud. Dead hanging twigs stay drier.",
+          "Take: inner bark of cedar or tulip poplar, birch bark even when wet, fatwood from old pine stumps, cattail fluff, cramp-ball fungus, a feather stick off dry heartwood.",
+          "Make a nest. Kindling the size of matchsticks, then pencils, then thumbs.",
+        ]}
+        note="If the tinder will not take a spark, the fire will not take the night."
+      >
+        <p>Dry, fine, and a lot of it. The nest is the whole trick.</p>
       </Plate>
-      <Plate src="/bushcraft/sphagnum.jpg" title="Sphagnum moss">
-        <p>
-          The pale green-red peat moss in bogs and seeps. Three jobs. Wet: wring
-          it for residual water, then boil what you drink. Wound: rinse, press
-          into a pad, cover — old armies packed it because it holds water and
-          is mildly acid. Dry: it takes a spark as tinder. Skip moss from
-          roadside ditches, livestock wallows, or water that smells like a
-          latrine.
-        </p>
+      <Plate
+        src="/bushcraft/sphagnum.jpg"
+        title="Sphagnum moss"
+        steps={[
+          "Pale green to red peat moss in bogs and seeps. Soft cushions, not star-shaped haircap moss.",
+          "Wet: wring it, then boil what you drink. Residual water only — not a clean source.",
+          "Wound: rinse, press into a pad, cover. Old armies packed it because it holds water and is mildly acid.",
+          "Dry: it takes a spark as tinder.",
+        ]}
+        note="Skip moss from roadside ditches, livestock wallows, or water that smells like a latrine."
+      >
+        <p>Three jobs: water, wound pad, tinder. Know it before you grab it.</p>
       </Plate>
-      <Plate src="/bushcraft/mud.jpg" title="Mud, and better">
-        <p>
-          Pale river clay as a last-ditch smear will knock back some sun and
-          some bugs. Keep it out of eyes and open skin. Black organic muck is
-          not clay — it is a wound waiting. Better, in order: clothes and shade,
-          a real repellent if you have it, wood ash mixed with a little fat,
-          covering up at dusk. Do not eat a plant for “bug juice” unless you
-          can name it in the daylight.
-        </p>
+      <Plate
+        src="/bushcraft/mud.jpg"
+        title="Mud, and better"
+        steps={[
+          "Pale river clay as a last-ditch smear will knock back some sun and some bugs. Keep it out of eyes and open skin.",
+          "Black organic muck is not clay. It is a wound waiting.",
+          "Better, in order: clothes and shade. Real repellent if you have it. Wood ash mixed with a little fat. Cover up at dusk.",
+        ]}
+        note="Do not eat a plant for bug juice unless you can name it in the daylight."
+      >
+        <p>Clay is a smear. Muck is dirt in a cut.</p>
       </Plate>
     </div>
   );
@@ -371,36 +535,46 @@ export function ToolCraftFire() {
   return (
     <div className="grid gap-4">
       <How>
-        Fire is a tool. You build it on mineral soil, you feed it in sizes, you
-        boil on coals. Flames look pretty. Coals do the work.
+        Fire is a tool. Build it on mineral soil. Feed it in sizes. Boil on
+        coals. Flames look pretty. Coals do the work.
       </How>
-      <Plate src="/bushcraft/firelay.jpg" title="Fire fundamentals">
-        <p>
-          Heat, fuel, air. Scrape to dirt. Clear a body-length of duff. Wind at
-          your back or a reflector. Tinder nest, kindling teepee, fuel staged
-          before the spark. One match is a plan. Wet wood is shaved to dry
-          heart. Bank coals under ash if you want fire in the morning. Kill it
-          dead when you leave — drown, stir, feel.
-        </p>
+      <Plate
+        src="/bushcraft/firelay.jpg"
+        title="Fire fundamentals"
+        steps={[
+          "Heat, fuel, air. Scrape to dirt. Clear a body-length of duff.",
+          "Wind at your back, or a reflector.",
+          "Tinder nest. Kindling teepee. Fuel staged before the spark.",
+          "One match is a plan. Wet wood is shaved to dry heart.",
+          "Bank coals under ash if you want fire in the morning.",
+          "Kill it dead when you leave — drown, stir, feel.",
+        ]}
+      >
+        <p>Build the pile before you light it. Size up, not all at once.</p>
       </Plate>
-      <Plate src="/bushcraft/boil-pot.jpg" title="Boil on the fire">
-        <p>
-          Hang the pot from a dingle stick or a crane over coals, not in a
-          roaring flame that blacks the metal and dumps soot in the water.
-          Rolling boil. A rolling boil does not make bad water good if the
-          source is chemical. It kills the bugs. Keep the bail or the stick
-          green so it does not burn through and dump your night.
-        </p>
+      <Plate
+        src="/bushcraft/boil-pot.jpg"
+        title="Boil on the fire"
+        steps={[
+          "Hang the pot from a dingle stick or a crane over coals, not in a roaring flame.",
+          "Wait for a rolling boil. Bugs die. Chemical water stays chemical.",
+          "Once it rolls: 1 minute. Above 2000 m / 6500 ft: 3 minutes.",
+          "Keep the bail or the stick green so it does not burn through and dump your night.",
+        ]}
+      >
+        <p>Coals, not flame. Flame blacks the pot and dumps soot in the water.</p>
       </Plate>
-      <Plate src="/bushcraft/boil-trash.jpg" title="Trash as a kettle">
-        <p>
-          Aluminum can: rinse, wire bail, hang over coals. Do not seal it. Do
-          not use galvanized (zinc). PET bottle: fill all the way, suspend well
-          above coals — never in the flame. The water keeps the plastic from
-          melting until it boils. If it slumps, it is too close. Never a sealed
-          can or bottle on heat. That is a bomb. Metal is better. Trash is a
-          backup.
-        </p>
+      <Plate
+        src="/bushcraft/boil-trash.jpg"
+        title="Trash as a kettle"
+        steps={[
+          "Aluminum can: rinse, wire bail, hang over coals. Do not seal it. Do not use galvanized (zinc).",
+          "PET bottle: fill all the way, suspend well above coals — never in the flame. The water keeps the plastic from melting until it boils. If it slumps, it is too close.",
+          "Never a sealed can or bottle on heat. That is a bomb.",
+        ]}
+        note="Metal is better. Trash is a backup."
+      >
+        <p>Open vessel. Coals, not flame. Watch it.</p>
       </Plate>
     </div>
   );

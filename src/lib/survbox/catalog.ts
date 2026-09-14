@@ -58,7 +58,7 @@ export const MODULES: ModuleDef[] = [
       { id: "slope", title: "Slope / grade", blurb: "Rise over run." },
       { id: "hike", title: "Hike time", blurb: "Naismith + pack + terrain." },
       { id: "cals", title: "Calorie need", blurb: "BMR, work, weather, miles." },
-      { id: "pace", title: "Pace distance", blurb: "Calibrate, then count." },
+      { id: "pace", title: "Pace distance", blurb: "Calibrate 100. Then count." },
       { id: "height", title: "Height / range", blurb: "Angle and a paced base." },
     ],
   },
@@ -83,7 +83,7 @@ export const MODULES: ModuleDef[] = [
       { id: "traps", title: "Traps", blurb: "Figure-4 and a simple snare." },
       { id: "knots", title: "Knots", blurb: "Bowline, figure-8, clove, trucker." },
       { id: "craftsig", title: "Signals", blurb: "Three fires, smoke, night." },
-      { id: "fieldcare", title: "Splint / TQ", blurb: "Improvised when the kit is gone." },
+      { id: "fieldcare", title: "Splint / TQ", blurb: "Makeshift splint. Backup tourniquet." },
       { id: "natural", title: "Natural resources", blurb: "Tinder, sphagnum, mud." },
       { id: "firecraft", title: "Fire craft", blurb: "Start it. Boil on it. Trash kettle." },
     ],
@@ -95,7 +95,7 @@ export const MODULES: ModuleDef[] = [
     icon: Anchor,
     tools: [
       { id: "rope", title: "Haul / rope", blurb: "Mechanical advantage vs load." },
-      { id: "hang", title: "Hang / line", blurb: "12-foot bag rule check." },
+      { id: "hang", title: "Hang / line", blurb: "12 / 6 / 6 bag rule." },
     ],
   },
   {

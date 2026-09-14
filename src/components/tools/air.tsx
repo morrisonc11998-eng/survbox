@@ -77,7 +77,7 @@ export function ToolPop() {
             { k: air.imperial ? "Dewpoint °F" : "Dewpoint °C", v: out.td.toFixed(1) },
             { k: "RH", v: `${Math.round(out.rh)}%` },
           ]}
-          note="Small T−Td = wetter air. Models still win."
+          note="Small T−Td = wetter air. A forecast still beats this guess."
         />
       ) : null}
     </div>
@@ -127,7 +127,7 @@ export function ToolCloud() {
           if (!air.ready) return;
           const m = cloudBaseM(air.tC, air.tdC);
           const note =
-            m < 300 ? "Low deck. Hills vanish." : m < 1000 ? "Ceiling coming down." : "Base still usable.";
+            m < 300 ? "Low deck. Terrain disappears." : m < 1000 ? "Ceiling coming down." : "Base still usable.";
           setOut({ m, note });
         }}
       >
@@ -193,7 +193,7 @@ export function ToolChill() {
   const { system } = useUnits();
   const t = useNum("20");
   const v = useNum("15");
-  const [out, setOut] = useState<null | { wct: number; note: string }>(null);
+  const [out, setOut] = useState<null | { wct: number; tF: number; note: string }>(null);
   const imperial = system === "us";
   return (
     <div className="grid gap-4">
@@ -218,7 +218,7 @@ export function ToolChill() {
           const tF = imperial ? t.n : fFromC(t.n);
           const mph = imperial ? v.n : v.n * 0.621371;
           const wct = windChillF(tF, mph);
-          setOut({ wct, note: frostbiteNote(tF, wct) });
+          setOut({ wct, tF, note: frostbiteNote(tF, wct) });
         }}
       >
         Compute
@@ -229,7 +229,7 @@ export function ToolChill() {
             { k: "Wind chill", v: `${Math.round(out.wct)}°F / ${cFromF(out.wct).toFixed(1)}°C` },
           ]}
           note={out.note}
-          tone={out.wct <= -18 ? "danger" : "warn"}
+          tone={out.wct <= -18 ? "danger" : out.tF < 32 ? "warn" : "ok"}
         />
       ) : null}
     </div>
@@ -286,14 +286,14 @@ function SoundTool({
 export function ToolLightning() {
   return (
     <SoundTool
-      titleHow="Start on the flash. Stop on the boom. 30-30: if flash-bang is under 30 seconds, stay put 30 minutes after the last thunder. Cold air is slower than the 'divide by 5' rule."
+      titleHow="Start on the flash. Stop on the boom. 30-30 rule: if flash-to-bang is under 30 seconds, stay put 30 minutes after the last thunder. Cold air is slower than the 'divide by 5' rule."
       eq="d = c(T)·t   c = 331.3 √(Tk / 273.15)"
       timerLabel="Flash → bang"
       after={(miles) =>
         miles <= 6
           ? { note: "Inside the kill zone. Get off high ground.", tone: "danger" }
           : miles <= 10
-            ? { note: "Close. Seek shelter. Still not a picnic.", tone: "warn" }
+            ? { note: "Close. Get inside. Still not safe on a ridge.", tone: "warn" }
             : { note: "Still not safe on a ridge.", tone: "ok" }
       }
     />
