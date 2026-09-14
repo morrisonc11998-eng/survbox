@@ -52,15 +52,15 @@ export const MODULES: ModuleDef[] = [
   {
     id: "move",
     title: "Move / Nav",
-    blurb: "Slope, hike time, pace, calories, height, resection.",
+    blurb: "Slope, hike, pace, calories, height, resection. Phone sensors.",
     icon: Compass,
     tools: [
-      { id: "slope", title: "Slope / grade", blurb: "Rise over run." },
-      { id: "hike", title: "Hike time", blurb: "Naismith + pack + terrain." },
-      { id: "cals", title: "Calorie need", blurb: "BMR, work, weather, miles." },
-      { id: "pace", title: "Pace distance", blurb: "Calibrate 100. Then count." },
-      { id: "height", title: "Height / range", blurb: "Angle and a paced base." },
-      { id: "resect", title: "Fix / bearings", blurb: "Two landmarks. Two headings. Your cut." },
+      { id: "slope", title: "Slope / grade", blurb: "Rise over run. Two GPS marks." },
+      { id: "hike", title: "Hike time", blurb: "Naismith. Fill from a GPS track." },
+      { id: "cals", title: "Calorie need", blurb: "BMR, work, weather. Miles from GPS." },
+      { id: "pace", title: "Pace distance", blurb: "Calibrate 100. GPS if you have it." },
+      { id: "height", title: "Height / range", blurb: "Phone pitch or a clinometer." },
+      { id: "resect", title: "Fix / bearings", blurb: "Two landmarks. Compass. GPS check." },
     ],
   },
   {

@@ -12,6 +12,8 @@ import {
   weatherKcalFactor,
   hangGeometry,
   paceDistance,
+  gradeFromPitch,
+  riseRunM,
 } from "./math.ts";
 
 test("sound speed at 20C", () => {
@@ -96,4 +98,18 @@ test("hang 12 ft branch fails the 6 ft below-limb rule", () => {
   const ok = hangGeometry(20, 20, true);
   assert.equal(ok.ok, true);
   assert.equal(ok.rope, 20 + 40 + 10);
+});
+
+test("pitch 45 is 100 percent grade", () => {
+  const g = gradeFromPitch(45);
+  assert.ok(Math.abs(g.grade - 100) < 0.01);
+  assert.equal(g.angle, 45);
+});
+
+test("two GPS marks give run and rise", () => {
+  const a = { lat: 39.42, lon: -81.45, altM: 200 };
+  const b = { lat: 39.43, lon: -81.45, altM: 250 };
+  const rr = riseRunM(a, b);
+  assert.ok(rr.runM > 1000 && rr.runM < 1200);
+  assert.equal(rr.riseM, 50);
 });

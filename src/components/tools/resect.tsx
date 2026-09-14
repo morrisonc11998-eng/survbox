@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as LeafletMap, LayerGroup } from "leaflet";
 import { Field, NumInput, Panel } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Eq, How, Result } from "@/components/result";
+import { SensorDock } from "@/components/sensor-dock";
 import { useUnits } from "@/lib/survbox/units";
 import { useNum } from "@/lib/survbox/num";
+import { fmtMeters, usePhoneSensors } from "@/lib/survbox/sensors";
 import {
   formatLatLon,
   fromEnu,
@@ -24,66 +26,6 @@ function token(name: string, fallback: string) {
   return v || fallback;
 }
 
-function useCompass() {
-  const [heading, setHeading] = useState<number | null>(null);
-  const headingRef = useRef<number | null>(null);
-  const [ready, setReady] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const arm = useCallback(async () => {
-    if (typeof window === "undefined") return;
-    const DOE = window.DeviceOrientationEvent as
-      | (typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> })
-      | undefined;
-    try {
-      if (DOE && typeof DOE.requestPermission === "function") {
-        const p = await DOE.requestPermission();
-        if (p !== "granted") {
-          setMsg("Compass blocked. Type the heading.");
-          return;
-        }
-      }
-    } catch {
-      setMsg("Compass blocked. Type the heading.");
-      return;
-    }
-    setReady(true);
-    setMsg(null);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    const onAbs = (e: DeviceOrientationEvent) => {
-      const webkit = (e as DeviceOrientationEvent & { webkitCompassHeading?: number })
-        .webkitCompassHeading;
-      let h: number | null = null;
-      if (typeof webkit === "number" && Number.isFinite(webkit)) h = wrapDeg(webkit);
-      else if (e.alpha != null) h = wrapDeg(360 - e.alpha);
-      if (h == null) return;
-      headingRef.current = h;
-      setHeading(h);
-    };
-    window.addEventListener("deviceorientationabsolute", onAbs as EventListener);
-    window.addEventListener("deviceorientation", onAbs as EventListener);
-    return () => {
-      window.removeEventListener("deviceorientationabsolute", onAbs as EventListener);
-      window.removeEventListener("deviceorientation", onAbs as EventListener);
-    };
-  }, [ready]);
-
-  return { heading, headingRef, ready, msg, arm };
-}
-
-function fmtDist(m: number, imperial: boolean) {
-  if (imperial) {
-    const yd = m * 1.09361;
-    if (yd >= 800) return `${(yd / 1760).toFixed(2)} mi`;
-    return `${yd.toFixed(0)} yd`;
-  }
-  if (m >= 800) return `${(m / 1000).toFixed(2)} km`;
-  return `${m.toFixed(0)} m`;
-}
-
 function reversePoint(from: LngLat, brgTrueToMark: number, meters: number): LngLat {
   const th = (brgTrueToMark * Math.PI) / 180;
   return fromEnu(-meters * Math.sin(th), -meters * Math.cos(th), from);
@@ -99,10 +41,13 @@ export function ToolResect() {
   const hdgB = useNum("");
   const decl = useNum("0");
   const [magnetic, setMagnetic] = useState(true);
-  const compass = useCompass();
+  const s = usePhoneSensors();
   const mapEl = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const layersRef = useRef<LayerGroup | null>(null);
+  const gpsLayerRef = useRef<LayerGroup | null>(null);
+  const fittedKey = useRef("");
+  const [mapReady, setMapReady] = useState(false);
   const stateRef = useRef({ placing, a, b });
   stateRef.current = { placing, a, b };
 
@@ -133,8 +78,11 @@ export function ToolResect() {
       }).addTo(map);
       L.control.zoom({ position: "topright" }).addTo(map);
       const layers = L.layerGroup().addTo(map);
+      const gpsLayer = L.layerGroup().addTo(map);
       mapRef.current = map;
       layersRef.current = layers;
+      gpsLayerRef.current = gpsLayer;
+      setMapReady(true);
       map.on("click", (ev) => {
         const { placing: next, a: curA, b: curB } = stateRef.current;
         const p: Mark = { lat: ev.latlng.lat, lon: ev.latlng.lng, label: next };
@@ -162,6 +110,8 @@ export function ToolResect() {
       map?.remove();
       mapRef.current = null;
       layersRef.current = null;
+      gpsLayerRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
@@ -235,14 +185,18 @@ export function ToolResect() {
           weight: 1,
           fillOpacity: 0,
         }).addTo(layers);
-        map.fitBounds(
-          [
-            [a.lat, a.lon],
-            [b.lat, b.lon],
-            [cut.fix.lat, cut.fix.lon],
-          ],
-          { padding: [28, 28], maxZoom: 14, animate: false },
-        );
+        const key = `${cut.fix.lat.toFixed(5)},${cut.fix.lon.toFixed(5)}`;
+        if (fittedKey.current !== key) {
+          fittedKey.current = key;
+          map.fitBounds(
+            [
+              [a.lat, a.lon],
+              [b.lat, b.lon],
+              [cut.fix.lat, cut.fix.lon],
+            ],
+            { padding: [28, 28], maxZoom: 14, animate: false },
+          );
+        }
       }
     })();
     return () => {
@@ -250,34 +204,59 @@ export function ToolResect() {
     };
   }, [a, b, placing, trueA, trueB, cut]);
 
-  async function shoot(which: "A" | "B") {
-    await compass.arm();
-    const grab = () => {
-      const h = compass.headingRef.current;
-      if (h == null) return false;
-      const v = h.toFixed(0);
-      if (which === "A") hdgA.setV(v);
-      else hdgB.setV(v);
-      return true;
+  useEffect(() => {
+    const layer = gpsLayerRef.current;
+    if (!layer) return;
+    let cancelled = false;
+    (async () => {
+      const L = await import("leaflet");
+      if (cancelled || !gpsLayerRef.current) return;
+      layer.clearLayers();
+      if (!s.fix) return;
+      const accent = token("--color-accent", "#c5cbb8");
+      L.circleMarker([s.fix.lat, s.fix.lon], {
+        radius: 6,
+        color: accent,
+        weight: 2,
+        fillColor: accent,
+        fillOpacity: 0.9,
+      }).addTo(layer);
+      L.circle([s.fix.lat, s.fix.lon], {
+        radius: Math.max(8, s.fix.accM),
+        color: accent,
+        weight: 1,
+        fillOpacity: 0.08,
+      }).addTo(layer);
+    })();
+    return () => {
+      cancelled = true;
     };
-    if (grab()) return;
-    window.setTimeout(() => {
-      if (!grab()) compass.arm();
-    }, 400);
+  }, [s.fix, mapReady]);
+
+  async function shoot(which: "A" | "B") {
+    const h = await s.afterArm(() => s.headingRef.current);
+    if (h == null) return;
+    const v = h.toFixed(0);
+    if (which === "A") hdgA.setV(v);
+    else hdgB.setV(v);
+  }
+
+  async function dropHere(which: "A" | "B") {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (!f) return;
+    const p: Mark = { lat: f.lat, lon: f.lon, label: which };
+    if (which === "A") setA(p);
+    else setB(p);
   }
 
   function centerGps() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], 13);
-      },
-      () => undefined,
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
+    void s.afterArm(() => s.fixRef.current).then((f) => {
+      if (f) mapRef.current?.setView([f.lat, f.lon], 14);
+    });
   }
 
-  const live = compass.heading != null ? `${compass.heading.toFixed(0)}°` : "—";
+  const gpsDelta =
+    cut && cut.ok && s.fix ? haversineM(s.fix, cut.fix) : null;
   const fmt = cut && cut.ok ? formatLatLon(cut.fix) : null;
   const spread = a && b ? haversineM(a, b) : null;
 
@@ -286,10 +265,24 @@ export function ToolResect() {
       <How>
         You look at a named mark and shoot the heading TO it. From that mark the
         reverse line runs back through you. Two of those lines cut at your fix.
-        Pick marks you can see, 30–150° apart. Map tiles need a network. The cut
-        does not.
+        Pick marks you can see, 30–150° apart. GPS is a check, not the answer.
+        Map tiles need a network. The cut does not.
       </How>
       <Eq>you = reverse(A, heading→A) ∩ reverse(B, heading→B)</Eq>
+
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" onClick={() => void dropHere("A")}>
+            I am at A
+          </Button>
+          <Button variant="secondary" onClick={() => void dropHere("B")}>
+            I am at B
+          </Button>
+        </div>
+        <p className="text-xs leading-relaxed text-subtle">
+          Walk to a named mark and drop it. Shoot headings from where you stand.
+        </p>
+      </SensorDock>
 
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="flex items-center justify-between gap-2 bg-raised px-3 py-2">
@@ -332,11 +325,6 @@ export function ToolResect() {
       </div>
 
       <Panel className="grid gap-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-xs font-medium tracking-wide text-muted uppercase">Live compass</p>
-          <p className="font-mono text-lg tabular-nums">{live}</p>
-        </div>
-        {compass.msg ? <p className="text-xs text-warn">{compass.msg}</p> : null}
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
           <Field label="Heading to A (deg)">
             <NumInput
@@ -392,11 +380,18 @@ export function ToolResect() {
             { k: "Fix (DDM)", v: fmt.ddm },
             { k: "Decimal", v: fmt.decimal },
             { k: "Cut", v: `${cut.cutDeg.toFixed(0)}°` },
-            { k: "Range A", v: fmtDist(cut.distAM, imperial) },
-            { k: "Range B", v: fmtDist(cut.distBM, imperial) },
-            ...(spread != null ? [{ k: "A to B", v: fmtDist(spread, imperial) }] : []),
+            { k: "Range A", v: fmtMeters(cut.distAM, imperial) },
+            { k: "Range B", v: fmtMeters(cut.distBM, imperial) },
+            ...(spread != null ? [{ k: "A to B", v: fmtMeters(spread, imperial) }] : []),
+            ...(gpsDelta != null
+              ? [{ k: "GPS vs cut", v: fmtMeters(gpsDelta, imperial) }]
+              : []),
           ]}
-          note={cut.note}
+          note={
+            gpsDelta != null
+              ? `${cut.note} GPS is ${fmtMeters(gpsDelta, imperial)} from the cut. Trust the tighter of the two.`
+              : cut.note
+          }
           tone={cut.tone}
         />
       ) : null}

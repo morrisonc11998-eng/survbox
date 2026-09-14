@@ -12,8 +12,9 @@ function Install() {
       <div className="grid gap-5 text-sm leading-relaxed text-muted">
         <p className="text-fg">
           Same field kit on the phone and in the browser. Bushcraft plates, real
-          photos, splint procedure, the math. The APK is offline. The site needs
-          a network the first time.
+          photos, splint procedure, the math. Move / Nav can use GPS, compass,
+          barometer, and pitch. The APK is offline. The site needs a network the
+          first time.
         </p>
 
         <section className="grid gap-2">

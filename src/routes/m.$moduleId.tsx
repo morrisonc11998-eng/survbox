@@ -1,7 +1,10 @@
 import { createFileRoute, Link, Outlet, notFound, useChildMatches } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { Shell } from "@/components/shell";
+import { Button } from "@/components/ui/button";
 import { getModule } from "@/lib/survbox/catalog";
+import { PhoneSensorsProvider, fmtMeters, usePhoneSensors } from "@/lib/survbox/sensors";
+import { useUnits } from "@/lib/survbox/units";
 
 export const Route = createFileRoute("/m/$moduleId")({
   component: ModulePage,
@@ -10,13 +13,21 @@ export const Route = createFileRoute("/m/$moduleId")({
 function ModulePage() {
   const children = useChildMatches();
   const { moduleId } = Route.useParams();
-  if (children.length > 0) return <Outlet />;
+  const inner = children.length > 0 ? <Outlet /> : <ModuleIndex />;
+  if (moduleId === "move") {
+    return <PhoneSensorsProvider>{inner}</PhoneSensorsProvider>;
+  }
+  return inner;
+}
 
+function ModuleIndex() {
+  const { moduleId } = Route.useParams();
   const mod = getModule(moduleId);
   if (!mod) throw notFound();
   return (
     <Shell title={mod.title} backTo="/">
       <p className="mb-4 text-sm text-muted">{mod.blurb}</p>
+      {moduleId === "move" ? <MovePhoneLine /> : null}
       <div className="grid gap-2">
         {mod.tools.map((t) => (
           <Link
@@ -34,5 +45,24 @@ function ModulePage() {
         ))}
       </div>
     </Shell>
+  );
+}
+
+function MovePhoneLine() {
+  const s = usePhoneSensors();
+  const { system } = useUnits();
+  const imperial = system === "us";
+  const fix = s.fix;
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+      <p className="min-w-0 text-sm leading-relaxed text-muted">
+        {fix
+          ? `GPS ±${fmtMeters(fix.accM, imperial)}${fix.heading != null ? ` · ${fix.heading.toFixed(0)}°` : ""}${fix.altM != null ? ` · ${fmtMeters(fix.altM, imperial)}` : ""}`
+          : "Arm the phone once. GPS, compass, and barometer feed every plate here."}
+      </p>
+      <Button variant="secondary" className="shrink-0 px-3" onClick={() => void s.arm()}>
+        {s.armed ? "Live" : "Use phone"}
+      </Button>
+    </div>
   );
 }

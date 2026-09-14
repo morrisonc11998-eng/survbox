@@ -111,6 +111,13 @@ export function slopeStats(rise: number, run: number) {
   return { grade, angle, slopeLen, extra: slopeLen - run };
 }
 
+/** Grade from a clinometer / phone pitch. Angle is elevation from level. */
+export function gradeFromPitch(pitchDeg: number) {
+  const angle = Math.abs(pitchDeg);
+  const a = (angle * Math.PI) / 180;
+  return { grade: 100 * Math.tan(a), angle };
+}
+
 export function naismithHours(opts: {
   imperial: boolean;
   dist: number;
@@ -280,6 +287,16 @@ export function haversineM(a: LngLat, b: LngLat) {
     Math.sin(dφ / 2) ** 2 +
     Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dλ / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+export function riseRunM(
+  a: LngLat & { altM?: number | null },
+  b: LngLat & { altM?: number | null },
+) {
+  return {
+    runM: haversineM(a, b),
+    riseM: a.altM != null && b.altM != null ? b.altM - a.altM : null,
+  };
 }
 
 export function formatLatLon(p: LngLat) {

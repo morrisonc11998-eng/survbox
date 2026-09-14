@@ -3,8 +3,10 @@ import { Field, NumInput, Select, Panel } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { FieldTimer } from "@/components/timer";
 import { Eq, How, Result } from "@/components/result";
+import { SensorDock } from "@/components/sensor-dock";
 import { useUnits } from "@/lib/survbox/units";
 import { useNum } from "@/lib/survbox/num";
+import { fmtMeters, fmtSpeed, mToLen, mToTravel, usePhoneSensors, type PhoneFix } from "@/lib/survbox/sensors";
 import {
   boilC,
   calorieNeed,
@@ -12,12 +14,15 @@ import {
   fFromC,
   formatHours,
   frostbiteNote,
+  gradeFromPitch,
+  haversineM,
   hangGeometry,
   heatEnergyKJ,
   lPer100,
   mpgFromFill,
   naismithHours,
   paceDistance,
+  riseRunM,
   slopeStats,
   windChillF,
   type WorkLevel,
@@ -25,30 +30,140 @@ import {
 
 export function ToolSlope() {
   const { system } = useUnits();
+  const imperial = system === "us";
   const rise = useNum("");
   const run = useNum("");
-  const [out, setOut] = useState<ReturnType<typeof slopeStats> | null>(null);
+  const [out, setOut] = useState<ReturnType<typeof slopeStats> & { note?: string } | null>(null);
+  const s = usePhoneSensors();
+  const [foot, setFoot] = useState<PhoneFix | null>(null);
+  const [crest, setCrest] = useState<PhoneFix | null>(null);
+  const [shotPitch, setShotPitch] = useState<number | null>(null);
+
+  function fillFromMarks(a: PhoneFix, b: PhoneFix) {
+    const rr = riseRunM(a, b);
+    run.setV(mToLen(rr.runM, imperial).toFixed(imperial ? 0 : 1));
+    if (rr.riseM != null) rise.setV(mToLen(rr.riseM, imperial).toFixed(imperial ? 0 : 1));
+  }
+
+  async function markFoot() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (!f) return;
+    setFoot(f);
+    setCrest((c) => {
+      if (c) fillFromMarks(f, c);
+      return c;
+    });
+  }
+  async function markCrest() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (!f) return;
+    setCrest(f);
+    setFoot((c) => {
+      if (c) fillFromMarks(c, f);
+      return c;
+    });
+  }
+  async function shootSlope() {
+    const p = await s.afterArm(() => s.pitchRef.current);
+    if (p == null) return;
+    const g = gradeFromPitch(p);
+    setShotPitch(g.angle);
+    let runN = run.ok ? run.n : NaN;
+    if (!Number.isFinite(runN) && foot && crest) {
+      runN = mToLen(haversineM(foot, crest), imperial);
+      run.setV(runN.toFixed(imperial ? 0 : 1));
+    }
+    if (Number.isFinite(runN) && runN > 0) {
+      rise.setV((runN * Math.tan((g.angle * Math.PI) / 180)).toFixed(1));
+    }
+  }
+
+  const canCompute =
+    (rise.ok && run.ok && run.n > 0) ||
+    (foot != null && crest != null) ||
+    shotPitch != null;
+
   return (
     <div className="grid gap-4">
       <How>
         Rise and run in the same units. Grade is the hill. Extra is how much
-        farther you walk than the map line.
+        farther you walk than the map line. Stand at the bottom, mark, walk the
+        slope, mark the top — barometer beats GPS for the rise. Or sight along
+        the phone and shoot the pitch.
       </How>
       <Eq>grade% = 100·rise/run · angle = atan(rise/run) · slope = √(r²+run²)</Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" onClick={() => void markFoot()}>
+            Mark bottom
+          </Button>
+          <Button variant="secondary" onClick={() => void markCrest()}>
+            Mark top
+          </Button>
+        </div>
+        <Button variant="secondary" className="w-full" onClick={() => void shootSlope()}>
+          Shoot pitch
+        </Button>
+        {foot || crest || shotPitch != null ? (
+          <p className="text-xs leading-relaxed text-subtle">
+            {foot ? `Bottom ±${fmtMeters(foot.accM, imperial)}.` : "No bottom yet."}{" "}
+            {crest ? `Top ±${fmtMeters(crest.accM, imperial)}.` : "No top yet."}
+            {shotPitch != null ? ` Pitch ${shotPitch.toFixed(0)}°.` : ""}
+            {foot && crest && (foot.altM == null || crest.altM == null)
+              ? " No altitude on one mark — type the rise or shoot pitch."
+              : ""}
+          </p>
+        ) : null}
+      </SensorDock>
       <Panel className="grid gap-3">
-        <Field label={`Rise (${system === "us" ? "ft" : "m"})`}>
+        <Field label={`Rise (${imperial ? "ft" : "m"})`}>
           <NumInput value={rise.v} onChange={(e) => rise.setV(e.target.value)} />
         </Field>
-        <Field label={`Run map (${system === "us" ? "ft" : "m"})`}>
+        <Field label={`Run map (${imperial ? "ft" : "m"})`}>
           <NumInput value={run.v} onChange={(e) => run.setV(e.target.value)} />
         </Field>
       </Panel>
       <Button
         className="w-full"
-        disabled={!rise.ok || !run.ok || run.n <= 0}
+        disabled={!canCompute}
         onClick={() => {
-          if (!rise.ok || !run.ok || run.n <= 0) return;
-          setOut(slopeStats(rise.n, run.n));
+          let riseN = rise.ok ? rise.n : NaN;
+          let runN = run.ok ? run.n : NaN;
+          if ((!Number.isFinite(riseN) || !Number.isFinite(runN) || runN <= 0) && foot && crest) {
+            const rr = riseRunM(foot, crest);
+            runN = mToLen(rr.runM, imperial);
+            run.setV(runN.toFixed(imperial ? 0 : 1));
+            if (rr.riseM != null) {
+              riseN = mToLen(rr.riseM, imperial);
+              rise.setV(riseN.toFixed(imperial ? 0 : 1));
+            }
+          }
+          if ((!Number.isFinite(riseN) || !Number.isFinite(runN) || runN <= 0) && shotPitch != null) {
+            if (Number.isFinite(runN) && runN > 0) {
+              riseN = runN * Math.tan((shotPitch * Math.PI) / 180);
+              rise.setV(riseN.toFixed(1));
+            } else {
+              const g = gradeFromPitch(shotPitch);
+              setOut({
+                ...slopeStats(Math.tan((g.angle * Math.PI) / 180), 1),
+                note: "Per 1 of map run. GPS the run for a length.",
+              });
+              return;
+            }
+          }
+          if (!Number.isFinite(riseN) || !Number.isFinite(runN) || runN <= 0) return;
+          const stats = slopeStats(riseN, runN);
+          setOut({
+            ...stats,
+            note:
+              stats.grade >= 40
+                ? "Scramble. Think twice about a pack."
+                : stats.grade >= 20
+                  ? "Hard climb. Slow it down."
+                  : stats.grade >= 10
+                    ? "Steady climb."
+                    : "Walkable grade.",
+          });
         }}
       >
         Compute
@@ -61,15 +176,7 @@ export function ToolSlope() {
             { k: "Slope length", v: out.slopeLen.toFixed(1) },
             { k: "Extra vs flat", v: out.extra.toFixed(1) },
           ]}
-          note={
-            out.grade >= 40
-              ? "Scramble. Think twice about a pack."
-              : out.grade >= 20
-                ? "Hard climb. Slow it down."
-                : out.grade >= 10
-                  ? "Steady climb."
-                  : "Walkable grade."
-          }
+          note={out.note}
         />
       ) : null}
     </div>
@@ -85,13 +192,41 @@ export function ToolHike() {
   const lite = useNum("");
   const [out, setOut] = useState<null | { hours: number; note: string }>(null);
   const imperial = system === "us";
+  const s = usePhoneSensors();
+
+  function applyTrack() {
+    const t = s.track;
+    if (t.distM < 10) return false;
+    dist.setV(mToTravel(t.distM, imperial).toFixed(2));
+    climb.setV(mToLen(t.climbM, imperial).toFixed(0));
+    return true;
+  }
+
   return (
     <div className="grid gap-4">
       <How>
         Moving time only. Add rests. Night walking is how people get hurt. Pack
-        slows you about 5.5% per 10 lb.
+        slows you about 5.5% per 10 lb. Start a GPS track on the trail you just
+        walked — Estimate uses it if the fields are empty. Live speed is a check
+        against Naismith, not a replacement.
       </How>
       <Eq>hr = mi/3 + ft/2000  or  km/5 + m/600  then × pack × terrain</Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          {s.track.running ? (
+            <Button variant="secondary" onClick={() => s.stopTrack()}>
+              Stop track
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => void s.startTrack()}>
+              Start track
+            </Button>
+          )}
+          <Button variant="secondary" disabled={s.track.distM < 10} onClick={() => applyTrack()}>
+            Fill hike
+          </Button>
+        </div>
+      </SensorDock>
       <Panel className="grid gap-3">
         <Field label={imperial ? "Distance mi" : "Distance km"}>
           <NumInput value={dist.v} onChange={(e) => dist.setV(e.target.value)} />
@@ -116,13 +251,20 @@ export function ToolHike() {
       </Panel>
       <Button
         className="w-full"
-        disabled={!dist.ok || !climb.ok}
+        disabled={!dist.ok && s.track.distM < 10}
         onClick={() => {
-          if (!dist.ok || !climb.ok) return;
+          let distN = dist.ok ? dist.n : NaN;
+          let climbN = climb.ok ? climb.n : 0;
+          if (!Number.isFinite(distN) && s.track.distM >= 10) {
+            applyTrack();
+            distN = mToTravel(s.track.distM, imperial);
+            climbN = mToLen(s.track.climbM, imperial);
+          }
+          if (!Number.isFinite(distN)) return;
           const hours = naismithHours({
             imperial,
-            dist: dist.n,
-            climb: climb.n,
+            dist: distN,
+            climb: climbN,
             packLb: pack.ok ? (imperial ? pack.n : pack.n * 2.20462) : 0,
             terrain: terr.ok ? terr.n : 1,
           });
@@ -130,6 +272,12 @@ export function ToolHike() {
           let note = "Add rests.";
           if (lite.ok && lite.n > 0) {
             note = need > lite.n ? `NOT back by dark. Need ${Math.round(need)} min.` : `Light margin ${Math.round(lite.n - need)} min.`;
+          }
+          const speed = s.fix?.speedMps;
+          if (speed != null && speed > 0.4) {
+            const distM = imperial ? distN * 1609.34 : distN * 1000;
+            const gpsH = distM / speed / 3600;
+            note = `${note} GPS is ${fmtSpeed(speed, imperial)} — that pace is ${formatHours(gpsH)} with no rest.`;
           }
           setOut({ hours, note });
         }}
@@ -160,15 +308,24 @@ export function ToolCals() {
   const dist = useNum("");
   const gain = useNum("");
   const [out, setOut] = useState<ReturnType<typeof calorieNeed> | null>(null);
+  const s = usePhoneSensors();
 
   const workId: WorkLevel = work.n === 1 ? "light" : work.n === 3 ? "heavy" : "medium";
+
+  function fillTrack() {
+    const tr = s.track;
+    if (tr.distM < 10) return;
+    dist.setV(mToTravel(tr.distM, imperial).toFixed(2));
+    if (tr.climbM > 0) gain.setV(mToLen(tr.climbM, imperial).toFixed(0));
+  }
 
   return (
     <div className="grid gap-4">
       <How>
         This is fuel for a day, not a diet plan. Mifflin-St Jeor sets the resting
         burn. Work is how hard the body is actually working. Walk and climb sit
-        on top of that. Cold and humid heat tax you extra.
+        on top of that. Cold and humid heat tax you extra. A GPS track fills
+        the miles and the gain.
       </How>
       <ul className="grid gap-2 rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed">
         <li>
@@ -187,6 +344,22 @@ export function ToolCals() {
       <Eq>
         BMR = 10·kg + 6.25·cm − 5·age + s · day = BMR×PAL + kg·km·k + 0.007·kg·m + weather
       </Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          {s.track.running ? (
+            <Button variant="secondary" onClick={() => s.stopTrack()}>
+              Stop track
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => void s.startTrack()}>
+              Start track
+            </Button>
+          )}
+          <Button variant="secondary" disabled={s.track.distM < 10} onClick={fillTrack}>
+            Fill miles
+          </Button>
+        </div>
+      </SensorDock>
       <Panel className="grid gap-3">
         <Field label="Sex">
           <Select value={sex.v} onChange={(e) => sex.setV(e.target.value)}>
@@ -228,11 +401,18 @@ export function ToolCals() {
         disabled={!age.ok || !height.ok || !weight.ok || !t.ok || height.n <= 0 || weight.n <= 0}
         onClick={() => {
           if (!age.ok || !height.ok || !weight.ok || !t.ok || height.n <= 0 || weight.n <= 0) return;
+          let distN = dist.ok ? dist.n : NaN;
+          let gainN = gain.ok ? gain.n : 0;
+          if (!Number.isFinite(distN) && s.track.distM >= 10) {
+            fillTrack();
+            distN = mToTravel(s.track.distM, imperial);
+            gainN = mToLen(s.track.climbM, imperial);
+          }
           const cm = imperial ? height.n * 2.54 : height.n;
           const kg = imperial ? weight.n * 0.453592 : weight.n;
           const tF = imperial ? t.n : fFromC(t.n);
-          const distKm = dist.ok ? (imperial ? dist.n * 1.60934 : dist.n) : 0;
-          const gainM = gain.ok ? (imperial ? gain.n * 0.3048 : gain.n) : 0;
+          const distKm = Number.isFinite(distN) ? (imperial ? distN * 1.60934 : distN) : 0;
+          const gainM = imperial ? gainN * 0.3048 : gainN;
           setOut(
             calorieNeed({
               kg,
@@ -279,14 +459,82 @@ export function ToolPace() {
   const n = useNum("");
   const [dist, setDist] = useState<number | null>(null);
   const unitName = unit.n === 1 ? "meters" : unit.n === 2 ? "yards" : "feet";
+  const { system } = useUnits();
+  const imperial = system === "us";
+  const s = usePhoneSensors();
+  const [start, setStart] = useState<PhoneFix | null>(null);
+  const [end, setEnd] = useState<PhoneFix | null>(null);
+
+  function distMFromGps() {
+    if (start && end) return haversineM(start, end);
+    if (s.track.distM >= 20) return s.track.distM;
+    return 0;
+  }
+
+  function toUnit(meters: number) {
+    if (unit.n === 1) return meters;
+    if (unit.n === 2) return meters * 1.09361;
+    return meters * 3.28084;
+  }
+
+  function calibrateGps() {
+    if (!n.ok || n.n <= 0) return;
+    const meters = distMFromGps();
+    if (meters < 20) return;
+    cal.setV(((n.n * 100) / toUnit(meters)).toFixed(1));
+  }
+
+  async function markStart() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (f) setStart(f);
+  }
+  async function markEnd() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (f) setEnd(f);
+  }
+
+  const gpsM = distMFromGps();
+
   return (
     <div className="grid gap-4">
       <How>
         Walk a measured 100 of your unit on this ground. Count every time the
         same foot hits — that is one pace. Recal on slope, sand, snow, night,
-        fatigue.
+        fatigue. Or mark start, walk, mark end. GPS measures the ground. You
+        still count.
       </How>
       <Eq>dist = (paces walked / paces per 100) × 100</Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" onClick={() => void markStart()}>
+            Mark start
+          </Button>
+          <Button variant="secondary" onClick={() => void markEnd()}>
+            Mark end
+          </Button>
+          {s.track.running ? (
+            <Button variant="secondary" onClick={() => s.stopTrack()}>
+              Stop track
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => void s.startTrack()}>
+              Start track
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            disabled={gpsM < 20 || !n.ok || n.n <= 0}
+            onClick={calibrateGps}
+          >
+            Calibrate
+          </Button>
+        </div>
+        <p className="text-xs leading-relaxed text-subtle">
+          Enter paces walked, then Calibrate. That writes paces per 100 from the
+          GPS distance.
+          {gpsM >= 20 ? ` GPS ${fmtMeters(gpsM, imperial)}.` : ""}
+        </p>
+      </SensorDock>
       <Panel className="grid gap-3">
         <Field label="Unit you calibrated">
           <Select value={unit.v} onChange={(e) => unit.setV(e.target.value)}>
@@ -304,10 +552,16 @@ export function ToolPace() {
       </Panel>
       <Button
         className="w-full"
-        disabled={!cal.ok || cal.n <= 0 || !n.ok}
+        disabled={!n.ok || ((!cal.ok || cal.n <= 0) && gpsM < 20)}
         onClick={() => {
-          if (!cal.ok || cal.n <= 0 || !n.ok) return;
-          setDist(paceDistance(n.n, cal.n));
+          if (!n.ok) return;
+          let per = cal.ok && cal.n > 0 ? cal.n : NaN;
+          if (!Number.isFinite(per) && gpsM >= 20) {
+            per = (n.n * 100) / toUnit(gpsM);
+            cal.setV(per.toFixed(1));
+          }
+          if (!Number.isFinite(per) || per <= 0) return;
+          setDist(paceDistance(n.n, per));
         }}
       >
         Distance
@@ -330,6 +584,11 @@ export function ToolPace() {
                     { k: "Miles", v: (dist / 5280).toFixed(3) },
                   ]
           }
+          note={
+            gpsM >= 20
+              ? `GPS ${fmtMeters(gpsM, imperial)}. Treat the pace count as the one you use when the sky is gone.`
+              : undefined
+          }
         />
       ) : null}
     </div>
@@ -343,13 +602,68 @@ export function ToolHeight() {
   const d = useNum("");
   const h = useNum("");
   const [out, setOut] = useState<null | { k: string; v: string }>(null);
+  const { system } = useUnits();
+  const imperial = system === "us";
+  const s = usePhoneSensors();
+  const [obj, setObj] = useState<PhoneFix | null>(null);
+  const [here, setHere] = useState<PhoneFix | null>(null);
+
+  function fillBase(a: PhoneFix, b: PhoneFix) {
+    d.setV(mToLen(haversineM(a, b), imperial).toFixed(imperial ? 0 : 1));
+  }
+
+  async function markObj() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (!f) return;
+    setObj(f);
+    setHere((c) => {
+      if (c) fillBase(f, c);
+      return c;
+    });
+  }
+  async function markHere() {
+    const f = await s.afterArm(() => s.fixRef.current);
+    if (!f) return;
+    setHere(f);
+    setObj((c) => {
+      if (c) fillBase(c, f);
+      return c;
+    });
+  }
+  async function shootAngle() {
+    const p = await s.afterArm(() => s.pitchRef.current);
+    if (p == null) return;
+    ang.setV(Math.abs(p).toFixed(1));
+  }
+
+  const gpsBase = obj && here ? haversineM(obj, here) : 0;
+
   return (
     <div className="grid gap-4">
       <How>
         Clinometer angle and a paced base on level ground. Angle is from your
-        eye to the top of the object.
+        eye to the top of the object. Hold the phone on edge, sight along the
+        long side, then shoot. Mark the object, walk back, mark here — GPS fills
+        the base.
       </How>
       <Eq>h = d·tan(a) + eye · range = (h − eye) / tan(a)</Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" onClick={() => void markObj()}>
+            Mark object
+          </Button>
+          <Button variant="secondary" onClick={() => void markHere()}>
+            Mark here
+          </Button>
+        </div>
+        <Button variant="secondary" className="w-full" onClick={() => void shootAngle()}>
+          Shoot angle
+        </Button>
+        <p className="text-xs leading-relaxed text-subtle">
+          Pitch is elevation from level. Horizon is 0. Straight up is 90.
+          {gpsBase > 1 ? ` Base ${fmtMeters(gpsBase, imperial)}.` : ""}
+        </p>
+      </SensorDock>
       <Panel className="grid gap-3">
         <Field label="Mode">
           <Select value={mode.v} onChange={(e) => mode.setV(e.target.value)}>
@@ -375,13 +689,24 @@ export function ToolHeight() {
       </Panel>
       <Button
         className="w-full"
-        disabled={!ang.ok || ang.n <= 0 || ang.n >= 90 || !eye.ok || (mode.n === 1 ? !d.ok : !h.ok)}
+        disabled={
+          !ang.ok ||
+          ang.n <= 0 ||
+          ang.n >= 90 ||
+          !eye.ok ||
+          (mode.n === 1 ? !d.ok && gpsBase < 1 : !h.ok)
+        }
         onClick={() => {
           if (!ang.ok || ang.n <= 0 || ang.n >= 90 || !eye.ok) return;
           const ta = Math.tan((ang.n * Math.PI) / 180);
           if (mode.n === 1) {
-            if (!d.ok) return;
-            setOut({ k: "Object height", v: (d.n * ta + eye.n).toFixed(1) });
+            let distN = d.ok ? d.n : NaN;
+            if (!Number.isFinite(distN) && gpsBase >= 1) {
+              distN = mToLen(gpsBase, imperial);
+              d.setV(distN.toFixed(imperial ? 0 : 1));
+            }
+            if (!Number.isFinite(distN)) return;
+            setOut({ k: "Object height", v: (distN * ta + eye.n).toFixed(1) });
           } else {
             if (!h.ok) return;
             setOut({ k: "Range", v: ((h.n - eye.n) / ta).toFixed(1) });
@@ -1293,11 +1618,12 @@ export function ToolEqns() {
         "Dewpoint Magnus 17.27 / 237.3",
         "LCL 125 m per °C of T−Td",
         "WCT NWS 2001 · HI Rothfusz · Tw Stull 2011",
-        "Naismith 3 mph + 2000 ft/h",
+        "Naismith 3 mph + 2000 ft/h · GPS track fills dist/climb",
         "Mifflin-St Jeor BMR · walk 0.55–1.05 kcal/kg/km · climb 0.007 kcal/kg/m",
         "Boil −1°C / 300 m · Q = m·4.184·ΔT kJ · ice +334 kJ/kg",
         "MPG = mi/gal · GCS = E+V+M · HR = count×60/t",
-        "Resection: reverse rays from two known marks; cut at you",
+        "Slope: two GPS marks or pitch tan · pace calib from GPS 100",
+        "Resection: reverse rays from two known marks; cut at you · GPS is a check",
       ]}
     />
   );
