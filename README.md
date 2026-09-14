@@ -1,12 +1,15 @@
-# SURVBOX 1.1
+# SURVBOX 1.1.1
 
 Pocket field kit. Type real numbers. Get a decision, not a lecture.
 
 Treat every number as an estimate. You are responsible for all actions. Nothing here is a substitute for training.
 
-## 1.1
+## 1.1.1
 
-Snapshot from 14 Sep 2026. Bushcraft plates use real field photographs with numbered steps for:
+Snapshot from 14 Sep 2026. Bushcraft plates use real field photographs with numbered steps.
+
+Clove hitch is a real rope-on-a-pole photo. Figure-8 knot and figure-8 on a bight added.
+
 
 - **Shelters** — lean-to, debris hut, tarp A-frame
 - **Traps** — figure-4 deadfall, simple snare
