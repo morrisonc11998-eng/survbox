@@ -1,4 +1,5 @@
 import { How } from "@/components/result";
+import { asset } from "@/lib/survbox/asset";
 
 function Plate({
   src,
@@ -15,7 +16,7 @@ function Plate({
 }) {
   return (
     <article className="overflow-hidden rounded-xl border border-border bg-surface">
-      <img src={src} alt={title} className="aspect-[4/3] w-full object-cover" />
+      <img src={asset(src)} alt={title} className="aspect-[4/3] w-full object-cover" />
       <div className="grid gap-3 p-4">
         <h2 className="font-display text-xl font-semibold tracking-wide">{title}</h2>
         {children ? (
@@ -371,7 +372,7 @@ export function ToolCraftCare() {
 
       <article className="overflow-hidden rounded-xl border border-border bg-surface">
         <img
-          src="/bushcraft/splint.jpg"
+          src={asset("/bushcraft/splint.jpg")}
           alt="Improvised forearm splint: padded shirt, stick along the bone, cloth wraps"
           className="aspect-[4/3] w-full object-cover object-[50%_35%]"
         />
@@ -445,7 +446,7 @@ export function ToolCraftCare() {
           </div>
 
           <img
-            src="/bushcraft/splint-leg.jpg"
+            src={asset("/bushcraft/splint-leg.jpg")}
             alt="Three real wilderness lower-leg splints: foam pad, clothing, stick and cloth"
             className="aspect-[4/3] w-full rounded-md object-cover"
           />

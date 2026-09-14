@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Static bundle for the Capacitor WebView.
- * SPA shell + public assets + client JS, no Node server.
+ * Static SPA bundle.
+ * Default: Capacitor WebView → android-www (base /).
+ * GitHub Pages: SURVBOX_WWW=pages-www SURVBOX_BASE=/survbox/
  */
 import { spawn } from "node:child_process";
 import {
@@ -18,7 +19,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const www = join(root, "android-www");
+const wwwName = process.env.SURVBOX_WWW || "android-www";
+const baseRaw = process.env.SURVBOX_BASE || "/";
+const base = baseRaw.endsWith("/") ? baseRaw : `${baseRaw}/`;
+const www = join(root, wwwName);
+const pages = wwwName === "pages-www";
 
 function run(cmd, args, extraEnv = {}) {
   return new Promise((resolve, reject) => {
@@ -66,6 +71,7 @@ function findShell(candidates) {
 
 await run("node", ["scripts/with-app-env.mjs", "vite", "build"], {
   SURVBOX_ANDROID: "1",
+  SURVBOX_BASE: base,
 });
 
 const candidates = [
@@ -77,14 +83,14 @@ const candidates = [
 ];
 
 const existing = candidates.filter((d) => existsSync(d));
-console.log("[android] build dirs:", existing.join(", ") || "(none)");
+console.log("[static] build dirs:", existing.join(", ") || "(none)");
 
 const shell = findShell(existing);
 if (!shell) {
-  console.error("[android] no HTML shell found. Looked in:", existing);
+  console.error("[static] no HTML shell found. Looked in:", existing);
   process.exit(1);
 }
-console.log("[android] shell:", shell);
+console.log("[static] shell:", shell);
 
 rmSync(www, { recursive: true, force: true });
 mkdirSync(www, { recursive: true });
@@ -101,41 +107,49 @@ const css = readdirSync(join(www, "assets")).find(
   (f) => f.startsWith("styles-") && f.endsWith(".css"),
 );
 if (!css) {
-  console.error("[android] no client CSS in android-www/assets");
+  console.error("[static] no client CSS in", join(www, "assets"));
   process.exit(1);
 }
 
+const cssHref = `${base}assets/${css}`;
 let html = readFileSync(shell, "utf8");
-html = html.replace(/\/assets\/styles-[^"]+\.css/g, `/assets/${css}`);
+html = html.replace(/(?:\/survbox)?\/assets\/styles-[^"]+\.css/g, cssHref);
+if (base !== "/") {
+  html = html.replace(/(href|src)="\/(?!survbox\/)/g, `$1="${base}`);
+}
 if (!html.includes("<html")) {
-  console.error("[android] index.html is not a full document");
+  console.error("[static] index.html is not a full document");
   process.exit(1);
 }
 writeFileSync(join(www, "index.html"), html);
 
 const grok = join(www, "__grok");
 mkdirSync(grok, { recursive: true });
-if (!existsSync(join(grok, "manifest.webmanifest"))) {
-  writeFileSync(
-    join(grok, "manifest.webmanifest"),
-    JSON.stringify(
-      {
-        name: "SURVBOX",
-        short_name: "SURVBOX",
-        display: "standalone",
-        background_color: "#111410",
-        theme_color: "#111410",
-        start_url: "/",
-        icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-        ],
-      },
-      null,
-      2,
-    ),
-  );
+writeFileSync(
+  join(grok, "manifest.webmanifest"),
+  JSON.stringify(
+    {
+      name: "SURVBOX",
+      short_name: "SURVBOX",
+      display: "standalone",
+      background_color: "#111410",
+      theme_color: "#111410",
+      start_url: base,
+      scope: base,
+      icons: [
+        { src: `${base}icon-192.png`, sizes: "192x192", type: "image/png" },
+        { src: `${base}icon-512.png`, sizes: "512x512", type: "image/png" },
+      ],
+    },
+    null,
+    2,
+  ),
+);
+
+if (pages) {
+  writeFileSync(join(www, "404.html"), html);
+  writeFileSync(join(www, ".nojekyll"), "");
 }
 
 const files = walk(www).length;
-console.log("[android] android-www ready,", files, "files; css", css);
+console.log("[static]", wwwName, "ready,", files, "files; css", css, "base", base);

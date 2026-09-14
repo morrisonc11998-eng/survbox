@@ -11,8 +11,11 @@ function NotFound() {
 }
 
 export function getRouter() {
+  const base = import.meta.env.BASE_URL || "/";
+  const basepath = !base || base === "/" ? undefined : base.replace(/\/$/, "");
   return createRouter({
     routeTree,
+    basepath,
     defaultErrorComponent: AppErrorComponent,
     defaultNotFoundComponent: NotFound,
   });

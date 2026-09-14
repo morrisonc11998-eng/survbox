@@ -1,8 +1,16 @@
-# SURVBOX 1.2.0
+# SURVBOX 1.2.1
 
 Pocket field kit. Type real numbers. Get a decision, not a lecture.
 
 Treat every number as an estimate. You are responsible for all actions. Nothing here is a substitute for training.
+
+## Web kit
+
+Same plates as the phone app, in the browser:
+
+**[morrisonc11998-eng.github.io/survbox](https://morrisonc11998-eng.github.io/survbox/)**
+
+Chrome or Safari → Add to Home Screen if you want an icon. First load needs a network. The APK does not.
 
 ## Android APK
 
@@ -13,14 +21,16 @@ A real app icon. Runs offline. No Play Store. No signal required.
 3. Open the file. Allow install from that source if Android asks.
 4. Play Protect may warn — this is a sideload, not a Play listing. Install anyway if you trust the release.
 
-The APK is the whole kit: plates, photos, math, fonts. Chrome “Add to Home screen” is a shortcut to the site and still needs a network the first time.
+## 1.2.1
+
+- Web kit on GitHub Pages — same bushcraft plates as the APK
+- Real knot, tinder, sphagnum, mud, and splint photos
+- Mud note: do not mash a plant onto your skin as repellent unless you can name it in daylight
 
 ## 1.2.0
 
 - Android APK on GitHub Releases (`com.cforged.survbox`)
 - Fonts ship in the kit so the field type still looks right with no signal
-- Natural resources photos are real plates, not generated art
-- Mud note: do not mash a plant onto your skin as repellent unless you can name it in daylight
 
 ## 1.1.2
 
@@ -34,6 +44,8 @@ Pace count now calibrates over 100 of your unit. Hang check is the real 12 / 6 /
 - **Traps** — figure-4 deadfall, simple snare
 - **Knots** — bowline, figure-8, figure-8 on a bight, taut-line hitch, clove hitch, trucker's hitch
 - **Splint / TQ** — pad, rigid stay past both joints, recheck fingers. Backup windlass TQ.
+- **Natural resources** — tinder, sphagnum, mud
+- **Fire** — lay, boil, trash kettle
 
 ## Modules
 

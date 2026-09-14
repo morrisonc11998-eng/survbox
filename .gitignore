@@ -5,6 +5,7 @@ node_modules/
 .output/
 dist/
 android-www/
+pages-www/
 dist-apk/
 .DS_Store
 *.log

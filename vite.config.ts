@@ -146,8 +146,10 @@ function authPopupPlugin(): Plugin {
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
 const androidApk = process.env.SURVBOX_ANDROID === "1";
+const pagesBase = process.env.SURVBOX_BASE || "/";
 
 export default defineConfig(({ command, isPreview }) => ({
+  base: pagesBase.endsWith("/") ? pagesBase : `${pagesBase}/`,
   server: {
     host: "0.0.0.0",
     port: 8080,

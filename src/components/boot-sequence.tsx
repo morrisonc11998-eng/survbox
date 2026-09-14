@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { Capacitor } from "@capacitor/core";
+import { asset } from "@/lib/survbox/asset";
 
 const KEY = "survbox-boot-v1";
 
@@ -36,7 +38,7 @@ export function BootSequence({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!landed.current) {
       landed.current = true;
-      if (router.history.location.pathname !== "/") {
+      if (Capacitor.isNativePlatform() && router.history.location.pathname !== "/") {
         router.history.replace("/");
       }
     }
@@ -87,7 +89,7 @@ export function BootSequence({ children }: { children: React.ReactNode }) {
         <video
           ref={videoRef}
           className="h-full w-full object-contain"
-          src="/c-forged-boot.mp4"
+          src={asset("/c-forged-boot.mp4")}
           playsInline
           muted
           autoPlay
