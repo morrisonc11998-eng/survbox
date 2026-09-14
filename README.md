@@ -52,7 +52,7 @@ Pace count now calibrates over 100 of your unit. Hang check is the real 12 / 6 /
 | Module | What it is |
 | --- | --- |
 | Air / Storm | PoP, ceiling, heat, chill, lightning, crack-boom |
-| Move / Nav | Slope, hike time, pace, calories, height and range |
+| Move / Nav | Slope, hike time, pace, calories, height, resection |
 | Water / Fire | Boil, water need, river look |
 | Bushcraft | Shelters, traps, knots, signals, splint, woods, fire |
 | Haul / Shelter | Mechanical advantage and hang geometry |

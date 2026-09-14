@@ -231,3 +231,141 @@ export function calorieNeed(opts: {
     total: Math.round(camp + walk + weather),
   };
 }
+
+export type LngLat = { lat: number; lon: number };
+
+export function wrapDeg(d: number) {
+  const x = d % 360;
+  return x < 0 ? x + 360 : x;
+}
+
+function rad(d: number) {
+  return (d * Math.PI) / 180;
+}
+function deg(r: number) {
+  return (r * 180) / Math.PI;
+}
+
+function metersPerDeg(lat0: number) {
+  const φ = rad(lat0);
+  return {
+    lat: 111132.92 - 559.82 * Math.cos(2 * φ) + 1.175 * Math.cos(4 * φ),
+    lon: 111412.84 * Math.cos(φ) - 93.5 * Math.cos(3 * φ),
+  };
+}
+
+export function toEnu(p: LngLat, origin: LngLat) {
+  const m = metersPerDeg(origin.lat);
+  return { e: (p.lon - origin.lon) * m.lon, n: (p.lat - origin.lat) * m.lat };
+}
+
+export function fromEnu(e: number, n: number, origin: LngLat): LngLat {
+  const m = metersPerDeg(origin.lat);
+  return { lat: origin.lat + n / m.lat, lon: origin.lon + e / m.lon };
+}
+
+/** True heading from `from` to `to`, degrees 0–360. Local tangent, not a great-circle. */
+export function bearingEnu(from: LngLat, to: LngLat) {
+  const origin = { lat: (from.lat + to.lat) / 2, lon: (from.lon + to.lon) / 2 };
+  const a = toEnu(from, origin);
+  const b = toEnu(to, origin);
+  return wrapDeg(deg(Math.atan2(b.e - a.e, b.n - a.n)));
+}
+
+export function haversineM(a: LngLat, b: LngLat) {
+  const R = 6371000;
+  const dφ = rad(b.lat - a.lat);
+  const dλ = rad(b.lon - a.lon);
+  const s =
+    Math.sin(dφ / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dλ / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+export function formatLatLon(p: LngLat) {
+  const ns = p.lat >= 0 ? "N" : "S";
+  const ew = p.lon >= 0 ? "E" : "W";
+  const alat = Math.abs(p.lat);
+  const alon = Math.abs(p.lon);
+  const ddm = (x: number) => {
+    const d = Math.floor(x);
+    const m = (x - d) * 60;
+    return `${d}° ${m.toFixed(3)}'`;
+  };
+  return {
+    decimal: `${alat.toFixed(5)}° ${ns}  ${alon.toFixed(5)}° ${ew}`,
+    ddm: `${ddm(alat)} ${ns}  ${ddm(alon)} ${ew}`,
+  };
+}
+
+export type ResectResult =
+  | {
+      ok: true;
+      fix: LngLat;
+      cutDeg: number;
+      distAM: number;
+      distBM: number;
+      note: string;
+      tone: "ok" | "warn" | "danger";
+    }
+  | { ok: false; note: string; tone: "warn" | "danger" };
+
+/**
+ * Two-point compass resection.
+ * `brgA` / `brgB` are TRUE headings you shot TO landmarks A and B.
+ * Reverse rays from those points cut at you.
+ */
+export function resectTwo(a: LngLat, b: LngLat, brgA: number, brgB: number): ResectResult {
+  const same = Math.abs(a.lat - b.lat) < 1e-7 && Math.abs(a.lon - b.lon) < 1e-7;
+  if (same) return { ok: false, note: "Pick two different landmarks.", tone: "warn" };
+
+  const origin = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
+  const A = toEnu(a, origin);
+  const B = toEnu(b, origin);
+  const thA = rad(brgA);
+  const thB = rad(brgB);
+  const sinA = Math.sin(thA);
+  const cosA = Math.cos(thA);
+  const sinB = Math.sin(thB);
+  const cosB = Math.cos(thB);
+  const dE = B.e - A.e;
+  const dN = B.n - A.n;
+  const det = -sinA * cosB + sinB * cosA;
+  if (Math.abs(det) < 1e-3) {
+    return { ok: false, note: "Headings nearly parallel. No cut. Pick a wider pair.", tone: "danger" };
+  }
+  const t = (dE * cosB - sinB * dN) / det;
+  const s = (-sinA * dN + cosA * dE) / det;
+  if (t <= 0 || s <= 0) {
+    return {
+      ok: false,
+      note: "Those headings do not meet behind both landmarks. You would not see both from that cut. Check the shots.",
+      tone: "danger",
+    };
+  }
+  if (t > 80000 || s > 80000) {
+    return {
+      ok: false,
+      note: "Cut is tens of miles out. You would not see those marks from there. Check the shots.",
+      tone: "danger",
+    };
+  }
+  const fixEnu = { e: A.e - t * sinA, n: A.n - t * cosA };
+  const fix = fromEnu(fixEnu.e, fixEnu.n, origin);
+  let cut = Math.abs(wrapDeg(brgA) - wrapDeg(brgB));
+  if (cut > 180) cut = 360 - cut;
+  const thin = cut < 25 || cut > 155;
+  const note = thin
+    ? `Thin cut (${cut.toFixed(0)}°). A few degrees of compass error moves you a long way. Walk, or pick a pair closer to 90°.`
+    : `Cut ${cut.toFixed(0)}°. Treat it as a patch, not a pin.`;
+  return {
+    ok: true,
+    fix,
+    cutDeg: cut,
+    distAM: t,
+    distBM: s,
+    note,
+    tone: thin ? "warn" : "ok",
+  };
+}
+

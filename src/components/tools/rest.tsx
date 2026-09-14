@@ -1297,6 +1297,7 @@ export function ToolEqns() {
         "Mifflin-St Jeor BMR · walk 0.55–1.05 kcal/kg/km · climb 0.007 kcal/kg/m",
         "Boil −1°C / 300 m · Q = m·4.184·ΔT kJ · ice +334 kJ/kg",
         "MPG = mi/gal · GCS = E+V+M · HR = count×60/t",
+        "Resection: reverse rays from two known marks; cut at you",
       ]}
     />
   );

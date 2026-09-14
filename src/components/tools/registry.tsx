@@ -45,6 +45,7 @@ import {
   ToolStop,
   ToolVitals,
 } from "@/components/tools/rest";
+import { ToolResect } from "@/components/tools/resect";
 
 export const TOOLS: Record<string, ComponentType> = {
   pop: ToolPop,
@@ -58,6 +59,7 @@ export const TOOLS: Record<string, ComponentType> = {
   cals: ToolCals,
   pace: ToolPace,
   height: ToolHeight,
+  resect: ToolResect,
   boil: ToolBoil,
   need: ToolNeed,
   river: ToolRiver,

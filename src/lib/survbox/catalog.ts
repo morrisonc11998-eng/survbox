@@ -52,7 +52,7 @@ export const MODULES: ModuleDef[] = [
   {
     id: "move",
     title: "Move / Nav",
-    blurb: "Slope, hike time, pace, calories, height and range.",
+    blurb: "Slope, hike time, pace, calories, height, resection.",
     icon: Compass,
     tools: [
       { id: "slope", title: "Slope / grade", blurb: "Rise over run." },
@@ -60,6 +60,7 @@ export const MODULES: ModuleDef[] = [
       { id: "cals", title: "Calorie need", blurb: "BMR, work, weather, miles." },
       { id: "pace", title: "Pace distance", blurb: "Calibrate 100. Then count." },
       { id: "height", title: "Height / range", blurb: "Angle and a paced base." },
+      { id: "resect", title: "Fix / bearings", blurb: "Two landmarks. Two headings. Your cut." },
     ],
   },
   {
