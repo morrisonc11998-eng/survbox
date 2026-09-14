@@ -1,4 +1,4 @@
-# SURVBOX 1.3.0
+# SURVBOX 1.4.0
 
 Pocket field kit. Type real numbers. Get a decision, not a lecture.
 
@@ -20,6 +20,18 @@ A real app icon. Runs offline. No Play Store. No signal required.
 2. Download **SURVBOX.apk**.
 3. Open the file. Allow install from that source if Android asks.
 4. Play Protect may warn — this is a sideload, not a Play listing. Install anyway if you trust the release.
+
+## 1.4.0
+
+Pitch, weather sensors, map, notes, calculator.
+
+- Clinometer: level / horizon is **0°**. Point the **top** of the phone. Sky is +90°, ground is −90°. Flat is not 90.
+- Air / Storm: phone barometer and thermometer (most phones have no air thermometer — type it; if it fills, it is case / ambient)
+- **Map / GPS**: save named waypoints, navigate back (bearing + range), reset the list
+- **Field notes**: scratch paper on the phone
+- **Calculator**: scientific, DEG default, sin / cos / tan / roots
+
+Waypoints and notes stay in local storage on that phone.
 
 ## 1.3.0
 
@@ -64,11 +76,14 @@ Pace count now calibrates over 100 of your unit. Hang check is the real 12 / 6 /
 
 | Module | What it is |
 | --- | --- |
-| Air / Storm | PoP, ceiling, heat, chill, lightning, crack-boom |
+| Air / Storm | PoP, ceiling, heat, chill, lightning, crack-boom. Phone temp / baro. |
 | Move / Nav | Slope, hike, pace, calories, height, resection. Phone sensors. |
+| Map / GPS | Named waypoints. Navigate back. Reset. |
 | Water / Fire | Boil, water need, river look |
 | Bushcraft | Shelters, traps, knots, signals, splint, woods, fire |
 | Haul / Shelter | Mechanical advantage and hang geometry |
 | Vehicle | 12V battery and fuel burn |
 | Medicine / TCCC | AVPU, GCS, MARCH, vitals |
 | Doctrine | STOP, priorities, signal, lost, equations |
+| Field notes | Scratch paper on the phone |
+| Calculator | Sin, cos, roots. DEG default. |

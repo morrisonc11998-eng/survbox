@@ -8,7 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { haversineM, wrapDeg } from "@/lib/survbox/math";
+import { Capacitor } from "@capacitor/core";
+import { haversineM, pitchFromGravity, wrapDeg } from "@/lib/survbox/math";
+import { FieldSensors } from "@/lib/survbox/field-sensors";
 
 export type PhoneFix = {
   lat: number;
@@ -20,8 +22,25 @@ export type PhoneFix = {
   courseDeg: number | null;
   pitchDeg: number | null;
   pressureHpa: number | null;
+  tempC: number | null;
   speedMps: number | null;
   at: number;
+};
+
+export type LiveSensors = {
+  pitchDeg: number | null;
+  heading: number | null;
+  pressureHpa: number | null;
+  tempC: number | null;
+  baroAltM: number | null;
+};
+
+const EMPTY_LIVE: LiveSensors = {
+  pitchDeg: null,
+  heading: null,
+  pressureHpa: null,
+  tempC: null,
+  baroAltM: null,
 };
 
 export type PhoneTrack = {
@@ -37,6 +56,14 @@ type Baro = {
   addEventListener: (type: "reading", fn: () => void) => void;
   removeEventListener: (type: "reading", fn: () => void) => void;
   pressure: number;
+};
+
+type Ambient = {
+  start: () => void;
+  stop: () => void;
+  addEventListener: (type: "reading", fn: () => void) => void;
+  removeEventListener: (type: "reading", fn: () => void) => void;
+  temperature: number;
 };
 
 function pressureAltM(hpa: number) {
@@ -71,10 +98,20 @@ export function mToTravel(m: number, imperial: boolean) {
   return imperial ? m / 1609.34 : m / 1000;
 }
 
+export function fmtTemp(c: number, imperial: boolean) {
+  return imperial ? `${((c * 9) / 5 + 32).toFixed(1)}°F` : `${c.toFixed(1)}°C`;
+}
+
+function applyPitch(ax: number, ay: number, az: number, pitchRef: { current: number | null }) {
+  const p = pitchFromGravity(ax, ay, az);
+  if (p != null) pitchRef.current = p;
+}
+
 function usePhoneSensorsState() {
   const [armed, setArmed] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [fix, setFix] = useState<PhoneFix | null>(null);
+  const [live, setLive] = useState<LiveSensors>(EMPTY_LIVE);
   const [track, setTrack] = useState<PhoneTrack>({
     running: false,
     distM: 0,
@@ -85,12 +122,31 @@ function usePhoneSensorsState() {
   const pitchRef = useRef<number | null>(null);
   const baroAltRef = useRef<number | null>(null);
   const pressureRef = useRef<number | null>(null);
+  const pressureAtRef = useRef<number | null>(null);
+  const pressurePrevRef = useRef<{ hpa: number; at: number } | null>(null);
+  const tempRef = useRef<number | null>(null);
   const fixRef = useRef<PhoneFix | null>(null);
   const lastTrack = useRef<{ lat: number; lon: number; altM: number | null } | null>(null);
   const tracking = useRef(false);
   const wakeRef = useRef<{ release: () => void } | null>(null);
   const watchRef = useRef<number | null>(null);
   const baroRef = useRef<Baro | null>(null);
+  const tempSensorRef = useRef<Ambient | null>(null);
+  const nativeStop = useRef<(() => void) | null>(null);
+  const nativeHasG = useRef(false);
+  const lastPaint = useRef(0);
+
+  const stampPressure = useCallback((hpa: number) => {
+    pressureRef.current = hpa;
+    baroAltRef.current = pressureAltM(hpa);
+    const now = Date.now();
+    if (pressureAtRef.current == null) {
+      pressurePrevRef.current = { hpa, at: now };
+    } else if (now - (pressurePrevRef.current?.at ?? 0) > 90_000) {
+      pressurePrevRef.current = { hpa: pressureRef.current ?? hpa, at: pressureAtRef.current };
+    }
+    pressureAtRef.current = now;
+  }, []);
 
   const publish = useCallback(
     (
@@ -108,6 +164,7 @@ function usePhoneSensorsState() {
         courseDeg: partial.courseDeg ?? null,
         pitchDeg: pitchRef.current,
         pressureHpa: pressureRef.current,
+        tempC: tempRef.current,
         speedMps: partial.speedMps ?? null,
         at: partial.at,
       };
@@ -133,9 +190,37 @@ function usePhoneSensorsState() {
     [],
   );
 
+  const paintSensors = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPaint.current < 80) return;
+    lastPaint.current = now;
+    setLive({
+      pitchDeg: pitchRef.current,
+      heading: headingRef.current,
+      pressureHpa: pressureRef.current,
+      tempC: tempRef.current,
+      baroAltM: baroAltRef.current,
+    });
+    setFix((f) => {
+      if (!f) return f;
+      const next: PhoneFix = {
+        ...f,
+        heading: headingRef.current,
+        pitchDeg: pitchRef.current,
+        pressureHpa: pressureRef.current,
+        tempC: tempRef.current,
+        altM: baroAltRef.current ?? f.altM,
+        altSource: baroAltRef.current != null ? "baro" : f.altSource,
+      };
+      fixRef.current = next;
+      return next;
+    });
+  }, []);
+
   const arm = useCallback(async () => {
     if (typeof window === "undefined") return;
     setMsg(null);
+
     const DOE = window.DeviceOrientationEvent as
       | (typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> })
       | undefined;
@@ -147,29 +232,71 @@ function usePhoneSensorsState() {
     } catch {
       setMsg("Compass blocked. Type headings.");
     }
+    const DME = window.DeviceMotionEvent as
+      | (typeof DeviceMotionEvent & { requestPermission?: () => Promise<string> })
+      | undefined;
+    try {
+      if (DME && typeof DME.requestPermission === "function") {
+        await DME.requestPermission();
+      }
+    } catch {
+      /* web pitch still tries */
+    }
 
-    const Baro = (
-      window as unknown as { BarometerSensor?: new (o?: { frequency?: number }) => Baro }
-    ).BarometerSensor;
-    if (Baro && !baroRef.current) {
+    if (Capacitor.isNativePlatform() && !nativeStop.current) {
       try {
-        const sensor = new Baro({ frequency: 1 });
-        const onRead = () => {
-          const hpa = toHpa(sensor.pressure);
-          pressureRef.current = hpa;
-          baroAltRef.current = pressureAltM(hpa);
+        await FieldSensors.start();
+        const handle = await FieldSensors.addListener("reading", (r) => {
+          if (typeof r.pressureHpa === "number") stampPressure(r.pressureHpa);
+          if (typeof r.tempC === "number") tempRef.current = r.tempC;
+          if (typeof r.ax === "number" && typeof r.ay === "number" && typeof r.az === "number") {
+            nativeHasG.current = true;
+            applyPitch(r.ax, r.ay, r.az, pitchRef);
+          }
+          paintSensors();
+        });
+        nativeStop.current = () => {
+          void handle.remove();
+          void FieldSensors.stop();
         };
+      } catch {
+        nativeStop.current = null;
+      }
+    }
+
+    const w = window as unknown as {
+      BarometerSensor?: new (o?: { frequency?: number }) => Baro;
+      AmbientTemperatureSensor?: new (o?: { frequency?: number }) => Ambient;
+    };
+    if (w.BarometerSensor && !baroRef.current && pressureRef.current == null) {
+      try {
+        const sensor = new w.BarometerSensor({ frequency: 1 });
+        const onRead = () => stampPressure(toHpa(sensor.pressure));
         sensor.addEventListener("reading", onRead);
         sensor.start();
         baroRef.current = sensor;
       } catch {
-        /* no baro permission / hardware */
+        /* no baro */
+      }
+    }
+    if (w.AmbientTemperatureSensor && !tempSensorRef.current && tempRef.current == null) {
+      try {
+        const sensor = new w.AmbientTemperatureSensor({ frequency: 0.5 });
+        const onRead = () => {
+          tempRef.current = sensor.temperature;
+        };
+        sensor.addEventListener("reading", onRead);
+        sensor.start();
+        tempSensorRef.current = sensor;
+      } catch {
+        /* no thermometer — most phones don't ship one */
       }
     }
 
     setArmed(true);
     if (!navigator.geolocation) {
-      setMsg("No GPS on this device. Type the numbers.");
+      setMsg((m) => m ?? "No GPS on this device. Type the numbers.");
+      paintSensors();
       return;
     }
     if (watchRef.current != null) return;
@@ -196,7 +323,7 @@ function usePhoneSensorsState() {
     };
     navigator.geolocation.getCurrentPosition(onPos, onErr, opts);
     watchRef.current = navigator.geolocation.watchPosition(onPos, onErr, opts);
-  }, [publish]);
+  }, [paintSensors, publish, stampPressure]);
 
   useEffect(() => {
     if (!armed) return;
@@ -208,33 +335,24 @@ function usePhoneSensorsState() {
       } else if (e.alpha != null) {
         headingRef.current = wrapDeg(360 - e.alpha);
       }
-      if (e.beta != null && Number.isFinite(e.beta)) {
-        let elev = 90 - e.beta;
-        if (elev > 90) elev -= 180;
-        if (elev < -90) elev += 180;
-        pitchRef.current = elev;
-      }
-      setFix((f) => {
-        if (!f) return f;
-        const next: PhoneFix = {
-          ...f,
-          heading: headingRef.current,
-          pitchDeg: pitchRef.current,
-          pressureHpa: pressureRef.current,
-          altM: baroAltRef.current ?? f.altM,
-          altSource: baroAltRef.current != null ? "baro" : f.altSource,
-        };
-        fixRef.current = next;
-        return next;
-      });
+      paintSensors();
+    };
+    const onMotion = (e: DeviceMotionEvent) => {
+      if (nativeHasG.current) return;
+      const g = e.accelerationIncludingGravity;
+      if (!g || g.x == null || g.y == null || g.z == null) return;
+      applyPitch(g.x, g.y, g.z, pitchRef);
+      paintSensors();
     };
     window.addEventListener("deviceorientationabsolute", onOri as EventListener);
     window.addEventListener("deviceorientation", onOri as EventListener);
+    window.addEventListener("devicemotion", onMotion);
     return () => {
       window.removeEventListener("deviceorientationabsolute", onOri as EventListener);
       window.removeEventListener("deviceorientation", onOri as EventListener);
+      window.removeEventListener("devicemotion", onMotion);
     };
-  }, [armed]);
+  }, [armed, paintSensors]);
 
   useEffect(() => {
     return () => {
@@ -244,6 +362,12 @@ function usePhoneSensorsState() {
       } catch {
         /* ignore */
       }
+      try {
+        tempSensorRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      nativeStop.current?.();
       void wakeRef.current?.release();
     };
   }, []);
@@ -298,19 +422,33 @@ function usePhoneSensorsState() {
     [arm],
   );
 
+  const pressureTrend = useCallback((): -1 | 0 | 1 | null => {
+    const now = pressureRef.current;
+    const prev = pressurePrevRef.current;
+    if (now == null || prev == null) return null;
+    const dh = now - prev.hpa;
+    if (Math.abs(dh) < 0.4) return 0;
+    return dh < 0 ? -1 : 1;
+  }, []);
+
   return {
     armed,
     msg,
     fix,
+    live,
     track,
     headingRef,
     pitchRef,
     fixRef,
+    tempRef,
+    pressureRef,
+    baroAltRef,
     arm,
     afterArm,
     startTrack,
     stopTrack,
     resetTrack,
+    pressureTrend,
   };
 }
 
@@ -333,13 +471,18 @@ const STUB: PhoneSensors = {
   armed: false,
   msg: null,
   fix: null,
+  live: EMPTY_LIVE,
   track: { running: false, distM: 0, climbM: 0, points: 0 },
   headingRef: stubRef,
   pitchRef: stubRef,
   fixRef: stubRef,
+  tempRef: stubRef,
+  pressureRef: stubRef,
+  baroAltRef: stubRef,
   arm: async () => {},
   afterArm: async () => null,
   startTrack: async () => {},
   stopTrack: () => {},
   resetTrack: () => {},
+  pressureTrend: () => null,
 };

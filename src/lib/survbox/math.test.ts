@@ -14,6 +14,7 @@ import {
   paceDistance,
   gradeFromPitch,
   riseRunM,
+  pitchFromGravity,
 } from "./math.ts";
 
 test("sound speed at 20C", () => {
@@ -112,4 +113,14 @@ test("two GPS marks give run and rise", () => {
   const rr = riseRunM(a, b);
   assert.ok(rr.runM > 1000 && rr.runM < 1200);
   assert.equal(rr.riseM, 50);
+});
+
+test("gravity pitch: flat is 0, top-up is 90, top-down is -90", () => {
+  assert.equal(pitchFromGravity(0, 0, 9.8), 0);
+  const up = pitchFromGravity(0, 9.8, 0);
+  const down = pitchFromGravity(0, -9.8, 0);
+  assert.ok(up != null && Math.abs(up - 90) < 0.01);
+  assert.ok(down != null && Math.abs(down + 90) < 0.01);
+  const tiltDown = pitchFromGravity(0, -1, 9.7);
+  assert.ok(tiltDown != null && tiltDown < 0 && tiltDown > -20);
 });

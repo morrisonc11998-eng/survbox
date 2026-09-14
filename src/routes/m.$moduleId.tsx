@@ -2,8 +2,9 @@ import { createFileRoute, Link, Outlet, notFound, useChildMatches } from "@tanst
 import { ChevronRight } from "lucide-react";
 import { Shell } from "@/components/shell";
 import { Button } from "@/components/ui/button";
+import { TOOLS } from "@/components/tools/registry";
 import { getModule } from "@/lib/survbox/catalog";
-import { PhoneSensorsProvider, fmtMeters, usePhoneSensors } from "@/lib/survbox/sensors";
+import { fmtMeters, usePhoneSensors } from "@/lib/survbox/sensors";
 import { useUnits } from "@/lib/survbox/units";
 
 export const Route = createFileRoute("/m/$moduleId")({
@@ -13,11 +14,21 @@ export const Route = createFileRoute("/m/$moduleId")({
 function ModulePage() {
   const children = useChildMatches();
   const { moduleId } = Route.useParams();
-  const inner = children.length > 0 ? <Outlet /> : <ModuleIndex />;
-  if (moduleId === "move") {
-    return <PhoneSensorsProvider>{inner}</PhoneSensorsProvider>;
+  const mod = getModule(moduleId);
+  if (!mod) throw notFound();
+
+  if (children.length > 0) return <Outlet />;
+
+  const single = mod.tools.length === 1 ? mod.tools[0] : null;
+  const View = single ? TOOLS[single.id] : null;
+  if (View) {
+    return (
+      <Shell title={mod.title} backTo="/">
+        <View />
+      </Shell>
+    );
   }
-  return inner;
+  return <ModuleIndex />;
 }
 
 function ModuleIndex() {

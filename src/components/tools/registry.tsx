@@ -46,6 +46,9 @@ import {
   ToolVitals,
 } from "@/components/tools/rest";
 import { ToolResect } from "@/components/tools/resect";
+import { ToolGpsMap } from "@/components/tools/gps-map";
+import { ToolNotes } from "@/components/tools/notes";
+import { ToolCalc } from "@/components/tools/calculator";
 
 export const TOOLS: Record<string, ComponentType> = {
   pop: ToolPop,
@@ -60,6 +63,9 @@ export const TOOLS: Record<string, ComponentType> = {
   pace: ToolPace,
   height: ToolHeight,
   resect: ToolResect,
+  gpsmap: ToolGpsMap,
+  notes: ToolNotes,
+  calc: ToolCalc,
   boil: ToolBoil,
   need: ToolNeed,
   river: ToolRiver,

@@ -5,6 +5,7 @@ import { FieldTimer } from "@/components/timer";
 import { Eq, How, Result } from "@/components/result";
 import { useUnits } from "@/lib/survbox/units";
 import { useNum } from "@/lib/survbox/num";
+import { fmtTemp, usePhoneSensors } from "@/lib/survbox/sensors";
 import {
   cFromF,
   cloudBaseM,
@@ -18,6 +19,47 @@ import {
   wetBulbC,
   windChillF,
 } from "@/lib/survbox/math";
+
+function PhoneWeatherFill({
+  onTempC,
+  onTrend,
+}: {
+  onTempC?: (c: number) => void;
+  onTrend?: (t: -1 | 0 | 1) => void;
+}) {
+  const s = usePhoneSensors();
+  const { system } = useUnits();
+  const imperial = system === "us";
+  const tempC = s.live.tempC ?? s.fix?.tempC;
+  const hpa = s.live.pressureHpa ?? s.fix?.pressureHpa;
+  const trend = s.pressureTrend();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2">
+      <p className="min-w-0 text-xs leading-relaxed text-muted">
+        {tempC != null
+          ? `Phone ${fmtTemp(tempC, imperial)} (case / ambient).`
+          : "No air thermometer — type it."}{" "}
+        {hpa != null ? `${hpa.toFixed(1)} hPa.` : "No barometer yet."}
+        {trend === -1 ? " Falling." : trend === 1 ? " Rising." : trend === 0 ? " Steady." : ""}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="secondary" className="px-3" onClick={() => void s.arm()}>
+          {s.armed ? "Live" : "Use phone"}
+        </Button>
+        {onTempC && tempC != null ? (
+          <Button variant="secondary" className="px-3" onClick={() => onTempC(tempC)}>
+            Fill temp
+          </Button>
+        ) : null}
+        {onTrend && trend != null ? (
+          <Button variant="secondary" className="px-3" onClick={() => onTrend(trend)}>
+            Fill trend
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function AirIn() {
   const { system } = useUnits();
@@ -46,9 +88,14 @@ export function ToolPop() {
     <div className="grid gap-4">
       <How>
         Type air temp and either dewpoint or RH. Falling pressure adds rain chance.
-        Tight T−Td means the air is already wet.
+        Tight T−Td means the air is already wet. Fill temp and trend from the phone
+        if it has a thermometer and a barometer.
       </How>
       <Eq>score = 80 − 12(T−Td) + RH/P bumps, clamp 5–95%</Eq>
+      <PhoneWeatherFill
+        onTempC={(c) => air.t.setV((air.imperial ? fFromC(c) : c).toFixed(1))}
+        onTrend={(t) => trend.setV(String(t))}
+      />
       <AirFields air={air} />
       <Field label="Pressure trend">
         <Select value={trend.v} onChange={(e) => trend.setV(e.target.value)}>
@@ -77,7 +124,7 @@ export function ToolPop() {
             { k: air.imperial ? "Dewpoint °F" : "Dewpoint °C", v: out.td.toFixed(1) },
             { k: "RH", v: `${Math.round(out.rh)}%` },
           ]}
-          note="Small T−Td = wetter air. A forecast still beats this guess."
+          note="Small T−Td = wetter air. A forecast still beats this guess. Phone temp is a case temp — shade it."
         />
       ) : null}
     </div>
@@ -120,6 +167,9 @@ export function ToolCloud() {
         this number is already small.
       </How>
       <Eq>H_m ≈ 125 × (T − Td) · H_ft ≈ 227 × (Tf − Tdf)</Eq>
+      <PhoneWeatherFill
+        onTempC={(c) => air.t.setV((air.imperial ? fFromC(c) : c).toFixed(1))}
+      />
       <AirFields air={air} />
       <Button
         className="w-full"
@@ -156,6 +206,9 @@ export function ToolHeat() {
         honest at 80°F and up. If wet-bulb is ugly, slow the work.
       </How>
       <Eq>Tw Stull 2011 · HI Rothfusz (T ≥ 80°F)</Eq>
+      <PhoneWeatherFill
+        onTempC={(c) => air.t.setV((air.imperial ? fFromC(c) : c).toFixed(1))}
+      />
       <AirFields air={air} />
       <Button
         className="w-full"
@@ -203,6 +256,9 @@ export function ToolChill() {
         does not.
       </How>
       <Eq>WCT = 35.74 + 0.6215T − 35.75V^0.16 + 0.4275 T V^0.16 (T°F, V mph)</Eq>
+      <PhoneWeatherFill
+        onTempC={(c) => t.setV((imperial ? fFromC(c) : c).toFixed(1))}
+      />
       <Panel className="grid gap-3">
         <Field label={imperial ? "Air temp °F" : "Air temp °C"}>
           <NumInput value={t.v} onChange={(e) => t.setV(e.target.value)} />
@@ -260,6 +316,9 @@ function SoundTool({
     <div className="grid gap-4">
       <How>{titleHow}</How>
       <Eq>{eq}</Eq>
+      <PhoneWeatherFill
+        onTempC={(c) => t.setV((imperial ? fFromC(c) : c).toFixed(1))}
+      />
       <Field label={imperial ? "Air temp °F" : "Air temp °C"}>
         <NumInput value={t.v} onChange={(e) => t.setV(e.target.value)} />
       </Field>

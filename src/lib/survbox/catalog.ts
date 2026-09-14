@@ -7,18 +7,24 @@ import {
   BookOpen,
   Anchor,
   Trees,
+  Map,
+  StickyNote,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 
 export type ModuleId =
   | "air"
   | "move"
+  | "map"
   | "water"
   | "craft"
   | "haul"
   | "vehicle"
   | "med"
-  | "doctrine";
+  | "doctrine"
+  | "notes"
+  | "calc";
 
 export type ToolDef = {
   id: string;
@@ -38,7 +44,7 @@ export const MODULES: ModuleDef[] = [
   {
     id: "air",
     title: "Air / Storm",
-    blurb: "PoP, ceiling, heat, chill, lightning, crack-boom.",
+    blurb: "PoP, ceiling, heat, chill, lightning. Phone temp and baro.",
     icon: CloudLightning,
     tools: [
       { id: "pop", title: "PoP guess", blurb: "Dewpoint depression heuristic." },
@@ -59,9 +65,16 @@ export const MODULES: ModuleDef[] = [
       { id: "hike", title: "Hike time", blurb: "Naismith. Fill from a GPS track." },
       { id: "cals", title: "Calorie need", blurb: "BMR, work, weather. Miles from GPS." },
       { id: "pace", title: "Pace distance", blurb: "Calibrate 100. GPS if you have it." },
-      { id: "height", title: "Height / range", blurb: "Phone pitch or a clinometer." },
+      { id: "height", title: "Height / range", blurb: "Point the top of the phone." },
       { id: "resect", title: "Fix / bearings", blurb: "Two landmarks. Compass. GPS check." },
     ],
+  },
+  {
+    id: "map",
+    title: "Map / GPS",
+    blurb: "Save named waypoints. Navigate back to them.",
+    icon: Map,
+    tools: [{ id: "gpsmap", title: "Map / GPS", blurb: "Waypoints. Bearing and range." }],
   },
   {
     id: "water",
@@ -139,6 +152,20 @@ export const MODULES: ModuleDef[] = [
       { id: "lost", title: "Lost", blurb: "Do not make a new last-known." },
       { id: "eqns", title: "Equations", blurb: "What the math actually is." },
     ],
+  },
+  {
+    id: "notes",
+    title: "Field notes",
+    blurb: "Scratch paper. Stays on the phone.",
+    icon: StickyNote,
+    tools: [{ id: "notes", title: "Field notes", blurb: "Write it down." }],
+  },
+  {
+    id: "calc",
+    title: "Calculator",
+    blurb: "Sin, cos, roots. DEG default.",
+    icon: Calculator,
+    tools: [{ id: "calc", title: "Calculator", blurb: "Scientific. Pocket slide rule." }],
   },
 ];
 

@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { BootSequence } from "@/components/boot-sequence";
 import { NativeShell } from "@/components/native-shell";
+import { PhoneSensorsProvider } from "@/lib/survbox/sensors";
 import { asset } from "@/lib/survbox/asset";
 import appCss from "../styles.css?url";
 
@@ -44,9 +45,11 @@ export const Route = createRootRoute({
         <PreviewHostBridge />
         <NativeShell />
         <AuthProvider>
-          <BootSequence>
-            <Outlet />
-          </BootSequence>
+          <PhoneSensorsProvider>
+            <BootSequence>
+              <Outlet />
+            </BootSequence>
+          </PhoneSensorsProvider>
         </AuthProvider>
         <Scripts />
       </body>

@@ -104,6 +104,9 @@ export function ToolSlope() {
         <Button variant="secondary" className="w-full" onClick={() => void shootSlope()}>
           Shoot pitch
         </Button>
+        <p className="font-mono text-sm tabular-nums text-fg">
+          Live pitch {s.live.pitchDeg != null ? `${s.live.pitchDeg.toFixed(0)}°` : "—"}
+        </p>
         {foot || crest || shotPitch != null ? (
           <p className="text-xs leading-relaxed text-subtle">
             {foot ? `Bottom ±${fmtMeters(foot.accM, imperial)}.` : "No bottom yet."}{" "}
@@ -641,10 +644,10 @@ export function ToolHeight() {
   return (
     <div className="grid gap-4">
       <How>
-        Clinometer angle and a paced base on level ground. Angle is from your
-        eye to the top of the object. Hold the phone on edge, sight along the
-        long side, then shoot. Mark the object, walk back, mark here — GPS fills
-        the base.
+        Clinometer angle and a paced base on level ground. Point the TOP of the
+        phone at the top of the object. Level / horizon is 0°. Sky is +90°.
+        Ground is −90°. Do not lay the phone flat and call that 90. Mark the
+        object, walk back, mark here — GPS fills the base.
       </How>
       <Eq>h = d·tan(a) + eye · range = (h − eye) / tan(a)</Eq>
       <SensorDock s={s} imperial={imperial}>
@@ -659,8 +662,11 @@ export function ToolHeight() {
         <Button variant="secondary" className="w-full" onClick={() => void shootAngle()}>
           Shoot angle
         </Button>
+        <p className="font-mono text-sm tabular-nums text-fg">
+          Live pitch {s.live.pitchDeg != null ? `${s.live.pitchDeg.toFixed(0)}°` : "—"}
+        </p>
         <p className="text-xs leading-relaxed text-subtle">
-          Pitch is elevation from level. Horizon is 0. Straight up is 90.
+          Point the top of the phone. A level phone is 0°, not 90°.
           {gpsBase > 1 ? ` Base ${fmtMeters(gpsBase, imperial)}.` : ""}
         </p>
       </SensorDock>
@@ -729,6 +735,7 @@ export function ToolBoil() {
   const snow = useNum("0");
   const [out, setOut] = useState<null | { bc: number; min: number; extra: string }>(null);
   const imperial = system === "us";
+  const s = usePhoneSensors();
   return (
     <div className="grid gap-4">
       <How>
@@ -736,6 +743,21 @@ export function ToolBoil() {
         time. Bugs die at a rolling boil. Chemical water stays chemical.
       </How>
       <Eq>Tboil °C = 100 − elev_m/300 · Q = m·4.184·ΔT (+334 kJ/kg ice) · t = Q/(kW·60)</Eq>
+      <SensorDock s={s} imperial={imperial}>
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={async () => {
+            const alt = await s.afterArm(
+              () => s.baroAltRef.current ?? s.fixRef.current?.altM ?? s.live.baroAltM,
+            );
+            if (alt == null) return;
+            elev.setV(mToLen(alt, imperial).toFixed(0));
+          }}
+        >
+          Fill elevation
+        </Button>
+      </SensorDock>
       <Panel className="grid gap-3">
         <Field label={imperial ? "Elevation ft" : "Elevation m"}>
           <NumInput value={elev.v} onChange={(e) => elev.setV(e.target.value)} />

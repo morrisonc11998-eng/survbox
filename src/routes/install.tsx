@@ -13,8 +13,9 @@ function Install() {
         <p className="text-fg">
           Same field kit on the phone and in the browser. Bushcraft plates, real
           photos, splint procedure, the math. Move / Nav can use GPS, compass,
-          barometer, and pitch. The APK is offline. The site needs a network the
-          first time.
+          barometer, and pitch. Map / GPS saves named waypoints. Field notes and
+          a scientific calculator sit on the main menu. The APK is offline. The
+          site needs a network the first time.
         </p>
 
         <section className="grid gap-2">

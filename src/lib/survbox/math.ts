@@ -118,6 +118,20 @@ export function gradeFromPitch(pitchDeg: number) {
   return { grade: 100 * Math.tan(a), angle };
 }
 
+/**
+ * Elevation of the phone's long axis (top of the device) above the horizon.
+ * Point the TOP of the phone at the object.
+ * Level / horizon = 0. Straight up = +90. Straight down = −90.
+ * `ax, ay, az` are gravity or accelerationIncludingGravity in device coords (m/s²).
+ */
+export function pitchFromGravity(ax: number, ay: number, az: number) {
+  const g = Math.hypot(ax, ay, az);
+  if (g < 2) return null;
+  const elev = (Math.atan2(ay, Math.hypot(ax, az)) * 180) / Math.PI;
+  if (!Number.isFinite(elev)) return null;
+  return Math.max(-90, Math.min(90, elev));
+}
+
 export function naismithHours(opts: {
   imperial: boolean;
   dist: number;
