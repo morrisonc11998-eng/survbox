@@ -10,7 +10,7 @@ Snapshot from 14 Sep 2026. Bushcraft plates use real field photographs with numb
 
 - **Shelters** — lean-to, debris hut, tarp A-frame
 - **Traps** — figure-4 deadfall, simple snare
-- **Knots** — bowline, taut-line hitch, clove hitch, trucker's hitch
+- **Knots** — bowline, figure-8, figure-8 on a bight, taut-line hitch, clove hitch, trucker's hitch
 
 ## Modules
 

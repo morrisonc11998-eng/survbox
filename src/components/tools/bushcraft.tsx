@@ -157,7 +157,7 @@ export function ToolCraftKnots() {
   return (
     <div className="grid gap-4">
       <How>
-        Learn four well. Wet cord stretches. Retension. Dress the knot. A knot
+        Learn these well. Wet cord stretches. Retension. Dress the knot. A knot
         you cannot untie in the cold is a cut away later.
       </How>
       <Plate
@@ -175,6 +175,38 @@ export function ToolCraftKnots() {
         <p>
           Fixed loop that will not slip and still unties after a load. Rabbit up
           the hole, around the tree, back down.
+        </p>
+      </Plate>
+      <Plate
+        src="/bushcraft/figure8.jpg"
+        title="Figure-8 knot"
+        steps={[
+          "Make a loop in the working end, then give it one extra twist so the rope lays as an 8.",
+          "Pass the working end through the top hole of the 8, the same way you would finish an overhand.",
+          "Dress it. The two turns sit parallel. No crossed strands.",
+          "Cinch. Leave a tail a few inches long so it cannot creep out.",
+        ]}
+        note="Stopper. Keeps a line from pulling through a grommet or a device. Not a loop. Not a harness tie-in."
+      >
+        <p>
+          The 8 you can see at a glance. Stronger and easier to inspect than an
+          overhand. This is the stopper, not the loop.
+        </p>
+      </Plate>
+      <Plate
+        src="/bushcraft/fig8-bight.jpg"
+        title="Figure-8 on a bight"
+        steps={[
+          "Double the rope. That doubled section is the bight — a fold, not a bite.",
+          "Tie a figure-8 with the doubled rope: twist into an 8, then feed the bight through the top hole.",
+          "Dress it. Parallel strands. Set the loop to the size you need before you cinch.",
+          "Cinch hard. Tail long enough that it cannot creep out.",
+        ]}
+        note="Fixed loop for a carabiner, a haul, a clip-in. Stronger and easier to inspect than a bowline. Harder to untie after a heavy load."
+      >
+        <p>
+          Same figure-8, tied on a doubled rope, so you get a loop. This is the
+          one climbers clip. A bight is a fold in the rope.
         </p>
       </Plate>
       <Plate

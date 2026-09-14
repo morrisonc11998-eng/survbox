@@ -81,7 +81,7 @@ export const MODULES: ModuleDef[] = [
     tools: [
       { id: "shelters", title: "Shelters", blurb: "Lean-to, debris hut, tarp." },
       { id: "traps", title: "Traps", blurb: "Figure-4 and a simple snare." },
-      { id: "knots", title: "Knots", blurb: "Bowline, taut-line, clove, trucker." },
+      { id: "knots", title: "Knots", blurb: "Bowline, figure-8, clove, trucker." },
       { id: "craftsig", title: "Signals", blurb: "Three fires, smoke, night." },
       { id: "fieldcare", title: "Splint / TQ", blurb: "Improvised when the kit is gone." },
       { id: "natural", title: "Natural resources", blurb: "Tinder, sphagnum, mud." },
