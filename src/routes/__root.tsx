@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { BootSequence } from "@/components/boot-sequence";
+import { NativeShell } from "@/components/native-shell";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "SURVBOX";
@@ -31,16 +32,6 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap",
-      },
     ],
   }),
   component: () => (
@@ -50,6 +41,7 @@ export const Route = createRootRoute({
       </head>
       <body className="bg-bg text-fg antialiased">
         <PreviewHostBridge />
+        <NativeShell />
         <AuthProvider>
           <BootSequence>
             <Outlet />

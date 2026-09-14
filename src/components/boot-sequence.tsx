@@ -8,7 +8,13 @@ export function BootSequence({ children }: { children: React.ReactNode }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const landed = useRef(false);
   const stuckRef = useRef(0);
-  const [phase, setPhase] = useState<"boot" | "out" | "done">("boot");
+  const [phase, setPhase] = useState<"boot" | "out" | "done">(() => {
+    try {
+      return sessionStorage.getItem(KEY) === "1" ? "done" : "boot";
+    } catch {
+      return "boot";
+    }
+  });
   const [armed, setArmed] = useState(false);
 
   const finish = useCallback(() => {

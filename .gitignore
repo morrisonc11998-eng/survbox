@@ -2,7 +2,10 @@ node_modules/
 .vercel/
 .tanstack/
 .grok/
+.output/
 dist/
+android-www/
+dist-apk/
 .DS_Store
 *.log
 .env

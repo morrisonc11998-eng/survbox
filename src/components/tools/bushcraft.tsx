@@ -523,7 +523,7 @@ export function ToolCraftNatural() {
           "Black organic muck is not clay. It is a wound waiting.",
           "Better, in order: clothes and shade. Real repellent if you have it. Wood ash mixed with a little fat. Cover up at dusk.",
         ]}
-        note="Do not eat a plant for bug juice unless you can name it in the daylight."
+        note="Do not mash a plant onto your skin as repellent unless you can name it in daylight."
       >
         <p>Clay is a smear. Muck is dirt in a cut.</p>
       </Plate>

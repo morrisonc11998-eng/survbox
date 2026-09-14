@@ -1,8 +1,26 @@
-# SURVBOX 1.1.2
+# SURVBOX 1.2.0
 
 Pocket field kit. Type real numbers. Get a decision, not a lecture.
 
 Treat every number as an estimate. You are responsible for all actions. Nothing here is a substitute for training.
+
+## Android APK
+
+A real app icon. Runs offline. No Play Store. No signal required.
+
+1. Open the [latest release](https://github.com/morrisonc11998-eng/survbox/releases/latest).
+2. Download **SURVBOX.apk**.
+3. Open the file. Allow install from that source if Android asks.
+4. Play Protect may warn — this is a sideload, not a Play listing. Install anyway if you trust the release.
+
+The APK is the whole kit: plates, photos, math, fonts. Chrome “Add to Home screen” is a shortcut to the site and still needs a network the first time.
+
+## 1.2.0
+
+- Android APK on GitHub Releases (`com.cforged.survbox`)
+- Fonts ship in the kit so the field type still looks right with no signal
+- Natural resources photos are real plates, not generated art
+- Mud note: do not mash a plant onto your skin as repellent unless you can name it in daylight
 
 ## 1.1.2
 

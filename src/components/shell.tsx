@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { useUnits } from "@/lib/survbox/units";
 import { DISCLAIMER } from "@/lib/survbox/disclaimer";
 import { Button } from "@/components/ui/button";
@@ -67,11 +68,13 @@ export function Shell({
       <footer className="grid gap-3 px-4 pb-4">
         <p className="text-center text-xs leading-relaxed text-subtle">{DISCLAIMER}</p>
         {backTo == null ? (
-          <p className="text-center text-xs">
-            <Link to="/install" className="text-muted underline-offset-2 hover:underline">
-              Add to phone
-            </Link>
-          </p>
+          Capacitor.isNativePlatform() ? null : (
+            <p className="text-center text-xs">
+              <Link to="/install" className="text-muted underline-offset-2 hover:underline">
+                Add to phone
+              </Link>
+            </p>
+          )
         ) : (
           <Button variant="ghost" className="w-full" onClick={() => router.history.push("/")}>
             Home
